@@ -57,6 +57,18 @@ st.title("🧩 Mulebuy 模块化作战室")
 
 # --- 5. 侧边栏导航 ---
 st.sidebar.title("工具箱")
+
+# ★★★★★ 新增：在这里添加模型选择的下拉菜单 ★★★★★
+st.session_state.selected_model = st.sidebar.selectbox(
+    "🧠 请选择要调用的AI模型:",
+    options=available_models,
+    index=available_models.index(st.session_state.selected_model), # 保持上次的选择
+    help="您的选择会立即生效，并应用于所有AI工具。"
+)
+st.sidebar.info(f"当前激活: **{st.session_state.selected_model}**")
+st.sidebar.markdown("---")
+
+
 for tool_name in available_tools:
     if st.sidebar.button(tool_name, use_container_width=True):
         st.session_state.selected_tool = tool_name
@@ -71,14 +83,6 @@ if not selected_tool_name:
 else:
     st.header(f"正在使用工具: {selected_tool_name}")
 
-    # ★★★★★ 新增：在这里添加模型选择的下拉菜单 ★★★★★
-    st.session_state.selected_model = st.selectbox(
-        "🧠 请选择要调用的AI模型:",
-        options=available_models,
-        index=available_models.index(st.session_state.selected_model), # 保持上次的选择
-        help="您的选择会立即生效，并应用于所有AI工具。"
-    )
-    st.info(f"当前激活的模型是: **{st.session_state.selected_model}**")
     st.markdown("---")
     
     # 动态加载并执行选中的工具
