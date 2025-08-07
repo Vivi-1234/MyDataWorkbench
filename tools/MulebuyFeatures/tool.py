@@ -49,11 +49,20 @@ def load_features(sort_by='created_at', order='desc'):
     db = st.session_state['db']
     try:
         direction = firestore.Query.DESCENDING if order == 'desc' else firestore.Query.ASCENDING
+        feature/native-mulebuy-features
+        # 为查询添加10秒的超时
+        features_ref = db.collection('prototypes').order_by(sort_by, direction=direction).stream(timeout=10)
+=======
         features_ref = db.collection('prototypes').order_by(sort_by, direction=direction).stream()
+        main
         features = [{'id': doc.id, **doc.to_dict()} for doc in features_ref]
         return features
     except Exception as e:
         st.error(f"从 Firestore 加载数据时出错: {e}")
+        feature/native-mulebuy-features
+        st.info("这可能是由于网络问题或防火墙限制。请检查您的网络连接是否能访问 Google Cloud 服务。")
+        
+        main
         return []
 
 def render_sidebar():
