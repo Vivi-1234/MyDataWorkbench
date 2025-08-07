@@ -1,0 +1,16 @@
+{
+    "account-service-favorites": "Favorites",
+    "product": "Product",
+    "shop": "Store",
+    "search-for-questions": "Search Favorites",
+    "favorltes-all": "All",
+    "favorltes-delete": "Delete",
+    "del-confirm": "Delete the selected item(s)?",
+    "shipping-calculator-all": "All",
+    "search-list-taobao": "Taobao",
+    "search-list-1688": "1688",
+    "weidian": "Weidian",
+    "favorltes-show-del-succes": "Deleted Successfully",
+    "favorltes-show-del-fail": "Delete Failed",
+    "del-confirm-shop": "Unfavorite this store?"
+}

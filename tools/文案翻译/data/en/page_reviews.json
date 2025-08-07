@@ -1,0 +1,20 @@
+{
+    "reviews": "Reviews",
+    "package-number": "Parcel Number",
+    "reviews-shopping-experience": "Shopping Experience",
+    "reviews-score": "No score",
+    "reviews-logistics-experience": "Logistics Experience",
+    "reviews-consult-experience": "Enquiry Experience",
+    "reviews-product-evaluate": "Product Review",
+    "package-details-logistics-details-show-more": "Expand All",
+    "package-details-logistics-details-close-more": "Collapse",
+    "filter-comments": "Filter Reviews",
+    "keyword-search": "Keyword Search",
+    "select-time": "Select Time",
+    "my-profile-reset": "Reset",
+    "button-search": "Search",
+    "no-comments": "No comments have been made yet.",
+    "start-date": "Start Date",
+    "end-date": "End Date",
+    "to": "To"
+}

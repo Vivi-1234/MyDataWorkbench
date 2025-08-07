@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Permissions-Policy" content="unload=()">
+    <title>Mulebuy - 功能原型框架</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .sidebar-item.active {
+            background-image: linear-gradient(to right, #8b5cf6, #a78bfa);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .sidebar-item.active .sidebar-item-desc { color: #ddd6fe; }
+        .sidebar-item.active .sidebar-item-icon { color: white; }
+        #edit-modal, #toast { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col">
+
+    <header class="bg-white/80 backdrop-blur-md shadow-sm z-20 border-b border-slate-200">
+        <div class="container mx-auto px-6 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <svg class="h-8 w-8 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                <h1 class="text-xl font-bold text-slate-800">Mulebuy 功能原型框架</h1>
+                <div id="connection-status" class="w-3 h-3 rounded-full bg-gray-400 ml-2" title="云同步状态"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-grow flex overflow-hidden">
+        <aside class="w-1/4 bg-white border-r border-slate-200 flex flex-col">
+            <div class="p-4 border-b border-slate-200 space-y-4">
+                 <button id="add-feature-btn" class="w-full bg-purple-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center gap-2 shadow-sm hover:shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    新增功能原型
+                </button>
+                <div>
+                    <label for="sort-by" class="text-xs font-medium text-slate-500">排序方式</label>
+                    <select id="sort-by" class="mt-1 block w-full rounded-md border-slate-200 shadow-sm text-sm focus:border-purple-500 focus:ring-purple-500">
+                        <option value="created_at">按创建时间</option>
+                        <option value="title">按标题排序</option>
+                    </select>
+                </div>
+            </div>
+            <div id="feature-list" class="flex-grow overflow-y-auto p-2 space-y-1">
+                 <p class="p-4 text-center text-slate-500 text-sm">正在从云端加载数据...</p>
+            </div>
+        </aside>
+
+        <main id="main-panel-container" class="w-3/4 flex flex-col bg-slate-50 overflow-hidden">
+            <div id="preview-container" class="w-full h-full flex-col hidden">
+                <div class="flex-shrink-0 p-4 bg-white border-b border-slate-200 flex justify-between items-center">
+                    <h2 id="preview-title" class="text-xl font-bold text-slate-800 truncate"></h2>
+                     <div>
+                        <button id="edit-current-btn" class="bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300 transition-colors duration-300 text-sm flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg>
+                            编辑
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-grow bg-white">
+                    <iframe id="preview-frame" class="w-full h-full border-0" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+            </div>
+            <div id="placeholder" class="w-full h-full flex items-center justify-center text-center text-slate-500 p-10">
+                <div>
+                     <svg class="mx-auto h-16 w-16 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    <h3 class="mt-4 text-lg font-medium text-slate-800">没有选中的原型</h3>
+                    <p class="mt-1 text-sm text-slate-500">请从左侧选择一个原型，或新增一个。</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-30 hidden opacity-0">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-5/6 flex flex-col">
+            <div class="p-5 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-800">编辑原型</h2>
+                <div class="flex items-center">
+                    <label for="published-toggle" class="mr-2 text-sm font-medium text-slate-700">标记为已发布:</label>
+                    <input type="checkbox" id="published-toggle" class="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                </div>
+            </div>
+            <div class="flex-grow p-6 space-y-4 overflow-y-auto">
+                 <div>
+                    <label for="feature-title" class="block text-sm font-medium text-slate-700">功能标题</label>
+                    <input type="text" id="feature-title" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-lg font-semibold">
+                </div>
+                <div>
+                    <label for="feature-description" class="block text-sm font-medium text-slate-700">功能描述</label>
+                    <textarea id="feature-description" rows="3" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"></textarea>
+                </div>
+                <div>
+                    <label for="feature-code" class="block text-sm font-medium text-slate-700">HTML 原型代码</label>
+                    <textarea id="feature-code" rows="15" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 font-mono text-xs"></textarea>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-4">
+                <button id="cancel-edit-btn" class="bg-white text-slate-700 font-semibold py-2 px-6 rounded-lg border border-slate-300 hover:bg-slate-100">取消</button>
+                <button id="save-edit-btn" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700">保存并关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="fixed bottom-5 right-5 bg-green-600 text-white py-3 px-6 rounded-lg shadow-lg opacity-0 transform translate-y-10">
+        操作成功！
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- ！！！在这里粘贴您的FIREBASE配置！！！ ---
+        const firebaseConfig = {
+  apiKey: "AIzaSyBCwMs5cb5hZaHaRdYpxsqeXAz4Lg1z13o",
+  authDomain: "allen-a8540.firebaseapp.com",
+  projectId: "allen-a8540",
+  storageBucket: "allen-a8540.firebasestorage.app",
+  messagingSenderId: "432437296739",
+  appId: "1:432437296739:web:07f331f75867c29efe4256",
+  measurementId: "G-39TVDDEDG2"
+};
+        // ------------------------------------------
+
+        // --- Firebase Initialization ---
+        let db;
+        const connectionStatusEl = document.getElementById('connection-status');
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("Firebase client initialized.");
+            connectionStatusEl.classList.replace('bg-gray-400', 'bg-green-500');
+            connectionStatusEl.title = "云同步已连接";
+        } catch (e) {
+            console.error("Firebase initialization failed:", e.message);
+            connectionStatusEl.classList.replace('bg-gray-400', 'bg-red-500');
+            connectionStatusEl.title = `云同步失败: ${e.message}`;
+            alert("Firebase 初始化失败！请检查您是否已将自己的配置信息粘贴到HTML文件中。");
+        }
+
+        // --- Application State ---
+        let features = [];
+        let selectedFeatureId = null;
+        let currentBlobUrl = null;
+        let currentSort = 'created_at';
+
+        // --- DOM Elements ---
+        const featureListEl = document.getElementById('feature-list');
+        const addFeatureBtn = document.getElementById('add-feature-btn');
+        const previewContainer = document.getElementById('preview-container');
+        const previewTitleEl = document.getElementById('preview-title');
+        const previewFrame = document.getElementById('preview-frame');
+        const placeholder = document.getElementById('placeholder');
+        const editModal = document.getElementById('edit-modal');
+        const editCurrentBtn = document.getElementById('edit-current-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const toastEl = document.getElementById('toast');
+        const sortByEl = document.getElementById('sort-by');
+        
+        const modalTitleInput = editModal.querySelector('#feature-title');
+        const modalDescriptionInput = editModal.querySelector('#feature-description');
+        const modalCodeInput = editModal.querySelector('#feature-code');
+        const modalPublishedToggle = editModal.querySelector('#published-toggle');
+
+        // --- Data Persistence & Sharing ---
+        async function loadFeatures() {
+             if (!db) {
+                featureListEl.innerHTML = '<p class="p-4 text-center text-red-500 text-sm">数据库连接失败。</p>';
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection('prototypes')
+                                         .orderBy(currentSort, currentSort === 'title' ? 'asc' : 'desc')
+                                         .get();
+                features = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log("Features loaded from Firebase.");
+                renderFeatureList();
+
+                if (features.length > 0 && !selectedFeatureId) {
+                    selectFeature(features[0].id);
+                } else if (features.length === 0) {
+                    showPlaceholder();
+                }
+
+            } catch (error) {
+                console.error("Error loading from Firestore:", error);
+                featureListEl.innerHTML = `<p class="p-4 text-center text-red-500 text-sm">加载数据失败: ${error.message}</p>`;
+            }
+        }
+
+        // --- Rendering Logic ---
+        function renderFeatureList() {
+            featureListEl.innerHTML = '';
+            if (features.length === 0) {
+                featureListEl.innerHTML = '<p class="p-4 text-center text-slate-500 text-sm">还没有原型，点击上方按钮新增一个吧！</p>';
+                return;
+            }
+            features.forEach(feature => {
+                const item = document.createElement('div');
+                item.className = `sidebar-item flex justify-between items-center p-3 m-2 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors duration-200 ${feature.id === selectedFeatureId ? 'active' : ''}`;
+                item.dataset.id = feature.id;
+                
+                const publishedIndicator = feature.published 
+                    ? `<div class="absolute top-2 right-2 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" title="已发布"></div>`
+                    : '';
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 truncate">
+                        <div class="relative flex-shrink-0">
+                            <svg class="sidebar-item-icon w-5 h-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                            ${publishedIndicator}
+                        </div>
+                        <div class="truncate">
+                            <h3 class="font-semibold truncate">${feature.title || '未命名原型'}</h3>
+                            <p class="sidebar-item-desc text-sm text-slate-500 truncate">${feature.description || '无描述'}</p>
+                        </div>
+                    </div>
+                    <button class="delete-btn flex-shrink-0 ml-2 p-1 rounded-full hover:bg-red-500 hover:text-white opacity-20 hover:opacity-100 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                `;
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-btn')) {
+                        deleteFeature(feature.id);
+                    } else {
+                        selectFeature(feature.id);
+                    }
+                });
+                featureListEl.appendChild(item);
+            });
+        }
+
+        function selectFeature(id) {
+            selectedFeatureId = id;
+            const feature = features.find(f => f.id === id);
+            if (feature) {
+                previewTitleEl.textContent = feature.title;
+                
+                if (currentBlobUrl) {
+                    URL.revokeObjectURL(currentBlobUrl);
+                }
+                const blob = new Blob([feature.htmlCode], { type: 'text/html' });
+                currentBlobUrl = URL.createObjectURL(blob);
+                previewFrame.src = currentBlobUrl;
+
+                previewContainer.classList.remove('hidden');
+                previewContainer.classList.add('flex');
+                placeholder.classList.add('hidden');
+            }
+            renderFeatureList();
+        }
+
+        function showPlaceholder() {
+            selectedFeatureId = null;
+            previewContainer.classList.add('hidden');
+            previewContainer.classList.remove('flex');
+            placeholder.classList.remove('hidden');
+            renderFeatureList();
+        }
+
+        // --- Modal Logic ---
+        function openEditModal(id) {
+            const featureId = id || selectedFeatureId;
+            if (!featureId) return;
+
+            selectedFeatureId = featureId; // Set selectedFeatureId here
+            
+            const feature = features.find(f => f.id === featureId);
+            if(feature) {
+                modalTitleInput.value = feature.title;
+                modalDescriptionInput.value = feature.description;
+                modalCodeInput.value = feature.htmlCode;
+                modalPublishedToggle.checked = feature.published;
+                editModal.classList.remove('hidden');
+                setTimeout(() => editModal.classList.remove('opacity-0'), 10);
+            }
+        }
+
+        function closeEditModal() {
+            editModal.classList.add('opacity-0');
+            setTimeout(() => editModal.classList.add('hidden'), 300);
+        }
+
+        // --- Event Handlers & CRUD ---
+        async function addFeature() {
+            const newFeatureData = {
+                title: '未命名原型',
+                description: '',
+                htmlCode: '<!DOCTYPE html>\\n<html>\\n<head>\\n  <title>新原型</title>\\n</head>\\n<body>\\n  <h1 style="font-family: sans-serif; text-align: center; margin-top: 2rem;">在此处开始构建...</h1>\\n</body>\\n</html>',
+                published: false,
+                created_at: firebase.firestore.FieldValue.serverTimestamp() // Use server timestamp
+            };
+            
+            try {
+                const docRef = await db.collection('prototypes').add(newFeatureData);
+                console.log("New feature created in Firebase with ID:", docRef.id);
+                showToast("新增成功！");
+                await loadFeatures(); // Reload data from Firebase
+                selectFeature(docRef.id);
+                openEditModal(docRef.id);
+            } catch (error) {
+                console.error("Error adding feature:", error);
+                showToast(`新增失败: ${error.message}`, true);
+            }
+        }
+
+        async function deleteFeature(id) {
+            if (!id) return;
+            if (!confirm('确定要删除这个原型吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            try {
+                await db.collection('prototypes').doc(id).delete();
+                console.log("Feature deleted from Firebase:", id);
+                showToast("删除成功！");
+                
+                // If the deleted feature was selected, show placeholder or select another
+                if (selectedFeatureId === id) {
+                     selectedFeatureId = null;
+                }
+                await loadFeatures(); // Reload data to reflect deletion
+                
+            } catch (error) {
+                console.error("Error deleting feature:", error);
+                showToast(`删除失败: ${error.message}`, true);
+            }
+        }
+
+        async function saveFeatureFromModal() {
+            if (!selectedFeatureId) return;
+            
+            const featureDataToUpdate = {
+                title: modalTitleInput.value,
+                description: modalDescriptionInput.value,
+                htmlCode: modalCodeInput.value,
+                published: modalPublishedToggle.checked
+            };
+            
+            try {
+                await db.collection('prototypes').doc(selectedFeatureId).update(featureDataToUpdate);
+                console.log("Feature updated in Firebase:", selectedFeatureId);
+                showToast("保存成功！");
+                await loadFeatures(); // Reload all data
+                selectFeature(selectedFeatureId); // Re-select to show updated content
+                closeEditModal();
+            } catch (error) {
+                console.error("Error saving feature:", error);
+                showToast(`保存失败: ${error.message}`, true);
+            }
+        }
+        
+        function handleSortChange() {
+            currentSort = sortByEl.value;
+            loadFeatures();
+        }
+
+        function showToast(message, isError = false) {
+            toastEl.textContent = message;
+            toastEl.classList.toggle('bg-green-600', !isError);
+            toastEl.classList.toggle('bg-red-600', isError);
+            toastEl.classList.remove('opacity-0', 'translate-y-10');
+            setTimeout(() => {
+                toastEl.classList.add('opacity-0', 'translate-y-10');
+            }, 3000);
+        }
+
+        addFeatureBtn.addEventListener('click', addFeature);
+        editCurrentBtn.addEventListener('click', () => openEditModal());
+        cancelEditBtn.addEventListener('click', closeEditModal);
+        saveEditBtn.addEventListener('click', saveFeatureFromModal);
+        sortByEl.addEventListener('change', handleSortChange);
+
+        editModal.addEventListener('click', (e) => {
+            if(e.target === editModal) closeEditModal();
+        });
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFeatures();
+        });
+    </script>
+
+</body>
+</html>
