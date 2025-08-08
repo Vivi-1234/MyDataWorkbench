@@ -237,6 +237,7 @@ def initialize_state(force=False):
 
 # --- UI 渲染函数 ---
 
+
 def render_step_1():
     """渲染步骤1的UI：上传与下载"""
     st.subheader("步骤 1: 上传 `qc.txt` 并下载图片")
