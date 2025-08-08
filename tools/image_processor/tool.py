@@ -29,7 +29,7 @@ class Config:
     MISSING_LOG_FILE = os.path.join(OUTPUT_DIR, 'missing_files_log.txt')
 
     MATCH_THRESHOLD = 0.8
-    NUM_WORKERS = max(1, os.cpu_count() - 1)
+    NUM_WORKERS = 15 # 根据用户反馈增加并发数
 
     # HSV 颜色阈值
     LOWER_RED1, UPPER_RED1 = np.array([0, 80, 80]), np.array([10, 255, 255])
@@ -60,7 +60,7 @@ def init_template_worker():
 # -------------------- 核心功能函数 --------------------
 
 def download_image(url):
-    """下载单个图片并返回状态"""
+    """下载单个图片并返回状态（采用流式下载和更详细的错误处理）"""
     try:
         path_parts = urlparse(url).path.strip('/').split('/')
         if len(path_parts) < 3:
@@ -76,12 +76,13 @@ def download_image(url):
         response = requests.get(url, stream=True, timeout=20, verify=True)
         if response.status_code == 200:
             with open(file_path, 'wb') as f:
-                f.write(response.content)
+                for chunk in response.iter_content(8192):
+                    f.write(chunk)
             return "success"
         else:
             return f"http_error_{response.status_code}"
-    except requests.exceptions.SSLError:
-        return "ssl_error"
+    except requests.exceptions.RequestException:
+        return "request_error"
     except Exception:
         return "error"
 
@@ -269,7 +270,8 @@ def render_step_1():
             st.write(f"⏩ **跳过 (文件已存在):** {summary.get('skipped', 0)} 张")
             http_errors = sum(v for k, v in summary.items() if k.startswith('http_error'))
             other_errors = summary.get('error', 0)
-            st.write(f"❌ **下载失败 (HTTP或网络错误):** {http_errors + other_errors} 张")
+            request_errors = summary.get('request_error', 0)
+            st.write(f"❌ **下载失败 (HTTP或网络错误):** {http_errors + other_errors + request_errors} 张")
             if summary.get('ssl_error', 0) > 0:
                 st.error(f"🔒 **SSL证书错误:** {summary.get('ssl_error', 0)} 张. 这通常由公司网络防火墙或代理引起。")
             st.markdown("---")
@@ -347,7 +349,7 @@ def render_step_1():
                     **下载进度: {i+1}/{len(urls)}**
                     - ✅ **成功**: {results_counter['success']}
                     - ⏩ **跳过**: {results_counter['skipped']}
-                    - ❌ **失败 (HTTP/网络)**: {sum(v for k, v in results_counter.items() if k.startswith('http_error') or k == 'error')}
+                    - ❌ **失败 (HTTP/网络)**: {sum(v for k, v in results_counter.items() if k.startswith('http_error') or k == 'error' or k == 'request_error')}
                     - 🔒 **失败 (SSL证书问题)**: {results_counter['ssl_error']}
                     """)
             
