@@ -71,6 +71,7 @@ st.sidebar.markdown("---")
 
 # 定义工具的显示名称映射
 tool_display_names = {
+    "image_processor": "图片批量处理器",
     "MulebuyPics": "Mulebuy图片",
     "Affiliate_data": "联盟数据",
     "Translator": "文案优化"
