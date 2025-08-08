@@ -22,10 +22,7 @@ class Config:
     TEMPLATE_DIR = os.path.join(BASE_PATH, 'templates')
     
     URL_FILE_PATH = os.path.join(INPUT_DIR, 'qc.txt')
-
     STATE_FILE_PATH = os.path.join(INPUT_DIR, 'state.json')
-
-  
     PROCESSED_FOLDER = os.path.join(OUTPUT_DIR, 'processed_images')
     UNPROCESSED_FOLDER = os.path.join(OUTPUT_DIR, 'unprocessed_images')
     DUPLICATE_LOG_FILE = os.path.join(OUTPUT_DIR, 'duplicate_urls_log.txt')
@@ -209,12 +206,10 @@ def save_state():
     """保存 session state 到文件"""
     state = {
         'current_step': st.session_state.get('current_step', 1),
-
         'match_threshold': st.session_state.get('match_threshold', 0.8),
         'download_complete': st.session_state.get('download_complete', False),
         'filter_complete': st.session_state.get('filter_complete', False),
         'template_process_complete': st.session_state.get('template_process_complete', False)
-
     }
     with open(Config.STATE_FILE_PATH, 'w') as f:
         json.dump(state, f)
@@ -257,9 +252,6 @@ def initialize_state(force=False):
         if changed:
             save_state()
 
-
-# --- UI 渲染函数 --
-
 def render_step_1():
     """渲染步骤1的UI：上传与下载"""
     st.subheader("步骤 1: 上传 `qc.txt` 并下载图片")
@@ -267,6 +259,20 @@ def render_step_1():
     # 如果下载已完成，显示报告和下一步按钮
     if st.session_state.get('download_complete'):
         st.success("✅ 步骤1已完成：图片已全部下载。")
+
+        if 'download_summary' in st.session_state and st.session_state.download_summary:
+            summary = st.session_state.download_summary
+            st.markdown("---")
+            st.subheader("下载报告总结")
+            st.write(f"✅ **成功下载:** {summary.get('success', 0)} 张")
+            st.write(f"⏩ **跳过 (文件已存在):** {summary.get('skipped', 0)} 张")
+            http_errors = sum(v for k, v in summary.items() if k.startswith('http_error'))
+            other_errors = summary.get('error', 0)
+            st.write(f"❌ **下载失败 (HTTP或网络错误):** {http_errors + other_errors} 张")
+            if summary.get('ssl_error', 0) > 0:
+                st.error(f"🔒 **SSL证书错误:** {summary.get('ssl_error', 0)} 张. 这通常由公司网络防火墙或代理引起。")
+            st.markdown("---")
+
         st.info("您可以重新上传文件开始新的下载任务，或进入下一步。")
         if st.button("➡️ 前往步骤2：自动筛选", type="primary"):
             st.session_state.current_step = 2
@@ -304,12 +310,19 @@ def render_step_1():
                                 st.success("✅ 非常好！文件中没有发现任何重复的链接。")
                             else:
                                 st.warning(f"🟡 注意: 共发现 {len(duplicates)} 个不同的链接出现了重复。")
+
+                                with st.expander("点击查看重复的链接列表"):
+                                    for url, count in sorted(duplicates.items(), key=lambda item: -item[1]):
+                                        st.code(f"出现 {count} 次: {url}")
+                                # 仍然保存日志文件作为备份
+
                                 with open(Config.DUPLICATE_LOG_FILE, 'w', encoding='utf-8') as log_f:
                                     log_f.write("以下是文件中重复出现的链接及其次数：\n")
                                     log_f.write("="*40 + "\n")
                                     for url, count in sorted(duplicates.items(), key=lambda item: -item[1]):
                                         log_f.write(f"出现 {count} 次: {url}\n")
-                                st.info(f"👉 详细的重复链接列表已保存到输出文件夹的 `{os.path.basename(Config.DUPLICATE_LOG_FILE)}` 文件中。")
+
+                                st.info(f"👉 详细的重复链接列表也已保存到输出文件夹的 `{os.path.basename(Config.DUPLICATE_LOG_FILE)}` 文件中。")
 
                             st.info(f"原始链接总数: {total_count} | 去重后的唯一链接总数: {unique_count}")
 
@@ -343,7 +356,8 @@ def render_step_1():
                     - ❌ **失败 (HTTP/网络)**: {sum(v for k, v in results_counter.items() if k.startswith('http_error') or k == 'error')}
                     - 🔒 **失败 (SSL证书问题)**: {results_counter['ssl_error']}
                     """)
-          
+            
+            st.session_state.download_summary = dict(results_counter)
             st.session_state.download_complete = True
 
             save_state()
@@ -355,6 +369,18 @@ def render_step_2():
 
     if st.session_state.get('filter_complete'):
         st.success("✅ 步骤2已完成：图片已自动筛选。")
+
+
+        if 'filter_summary' in st.session_state and st.session_state.filter_summary:
+            summary = st.session_state.filter_summary
+            st.markdown("---")
+            st.subheader("筛选报告总结")
+            st.write(f"➡️ **移动到 'processed' 的图片:** {summary.get('no_logo_moved', 0)} 张")
+            st.write(f"✅ **保留在 'unprocessed' 的图片:** {summary.get('logo_found_stay', 0)} 张")
+            st.write(f"❌ **处理失败:** {summary.get('error_stay', 0) + summary.get('load_fail', 0)} 张")
+            st.markdown("---")
+
+
         if st.button("➡️ 前往步骤3：模板匹配", type="primary"):
             st.session_state.current_step = 3
             save_state()
@@ -387,6 +413,8 @@ def render_step_2():
                     - ❌ **处理失败**: {results_counter['error_stay'] + results_counter['load_fail']}
                     """)
             st.success("自动筛选完成！")
+            st.session_state.filter_summary = dict(results_counter)
+
             st.session_state.filter_complete = True
 
         save_state()
@@ -398,6 +426,18 @@ def render_step_3():
 
     if st.session_state.get('template_process_complete'):
         st.success("✅ 步骤3已完成：所有剩余图片已使用模板处理完毕。")
+
+
+        if 'template_summary' in st.session_state and st.session_state.template_summary:
+            summary = st.session_state.template_summary
+            st.markdown("---")
+            st.subheader("模板处理报告总结")
+            st.write(f"✅ **已处理覆盖:** {summary.get('processed', 0)} 张")
+            st.write(f"⏩ **未匹配跳过:** {summary.get('unmatched', 0)} 张")
+            st.write(f"❌ **处理失败:** {summary.get('error', 0) + summary.get('load_fail', 0)} 张")
+            st.markdown("---")
+
+
         if st.button("➡️ 前往步骤4：最终校验", type="primary"):
             st.session_state.current_step = 4
             save_state()
@@ -417,8 +457,18 @@ def render_step_3():
         st.success("模板上传成功！请在下面开始处理。")
 
     if template_files:
-        # ... (删除模板UI) ...
-        pass
+
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            template_to_delete = st.selectbox("或选择要删除的模板:", [""] + template_files, key="template_selector")
+        with col2:
+            st.write("") # 占位符，让按钮和选择框对齐
+            st.write("") # 占位符
+            if template_to_delete and st.button("删除所选", key="delete_template"):
+                os.remove(os.path.join(Config.TEMPLATE_DIR, template_to_delete))
+                st.warning(f"模板 '{template_to_delete}' 已删除。")
+                st.rerun()
+
 
     st.markdown("**参数调整**")
     st.session_state.match_threshold = st.slider("设置匹配阈值:", 0.5, 0.95, st.session_state.get('match_threshold', 0.8), 0.01, on_change=save_state)
@@ -446,6 +496,9 @@ def render_step_3():
                 progress_bar.progress((i + 1) / len(tasks))
         
         st.success("本轮处理完成！")
+
+        st.session_state.template_summary = dict(results_counter)
+
         st.session_state.template_process_complete = True
         save_state()
         st.rerun()
@@ -497,10 +550,15 @@ def render_step_4():
                     st.success(f"✅ 恭喜！'{os.path.basename(Config.URL_FILE_PATH)}' 中的所有 {len(original_urls)} 个链接都在 `processed_images` 文件夹中找到了对应的文件。")
                 else:
                     st.warning(f"🟡 注意: 发现 {len(missing_files)} 个缺失的文件。")
+
+                    with st.expander("点击查看缺失的文件URL列表"):
+                        st.code('\n'.join(missing_files))
+                    # 仍然保存日志文件作为备份
                     with open(Config.MISSING_LOG_FILE, 'w', encoding='utf-8') as log_f:
                         for url in missing_files:
                             log_f.write(url + '\n')
-                    st.info(f"👉 详细的缺失文件URL列表已保存到输出文件夹的 `{os.path.basename(Config.MISSING_LOG_FILE)}` 文件中。")
+                    st.info(f"👉 详细的缺失文件URL列表也已保存到输出文件夹的 `{os.path.basename(Config.MISSING_LOG_FILE)}` 文件中。")
+
 
             except Exception as e:
                 st.error(f"核对文件时出错: {e}")
@@ -515,25 +573,51 @@ def display_folder_status():
     st.sidebar.metric(label="🟢 已处理图片", value=processed_count)
 
 def render_reset_ui():
-    """渲染重置按钮的UI"""
+
+    """渲染重置按钮的UI，包含二次确认"""
     st.sidebar.markdown("---")
     st.sidebar.subheader("重置操作")
-    if st.sidebar.button("🗑️ 全部重置并从头开始", type="primary"):
-        if os.path.exists(Config.STATE_FILE_PATH):
-            os.remove(Config.STATE_FILE_PATH)
-        for folder in [Config.PROCESSED_FOLDER, Config.UNPROCESSED_FOLDER]:
-            if os.path.exists(folder):
-                shutil.rmtree(folder)
-        st.session_state.clear()
-        initialize_state(force=True)
-        st.success("所有进度和文件已重置！")
-        time.sleep(1)
 
-        st.rerun()
+    if 'confirming_reset' not in st.session_state:
+        st.session_state.confirming_reset = False
+
+    if st.session_state.confirming_reset:
+        st.sidebar.warning("您确定要重置所有进度和文件吗？此操作无法撤销。")
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            if st.button("✅ 是的，确认重置", use_container_width=True):
+                if os.path.exists(Config.STATE_FILE_PATH):
+                    os.remove(Config.STATE_FILE_PATH)
+                for folder in [Config.PROCESSED_FOLDER, Config.UNPROCESSED_FOLDER]:
+                    if os.path.exists(folder):
+                        shutil.rmtree(folder)
+
+                # 保留工具选择状态，重置其他
+                tool = st.session_state.get('selected_tool')
+                model = st.session_state.get('selected_model')
+                st.session_state.clear()
+                st.session_state.selected_tool = tool
+                st.session_state.selected_model = model
+
+                initialize_state(force=True)
+                st.session_state.confirming_reset = False
+                st.success("所有进度和文件已重置！")
+                time.sleep(1)
+                st.rerun()
+        with col2:
+            if st.button("❌ 取消", use_container_width=True):
+                st.session_state.confirming_reset = False
+                st.rerun()
+    else:
+        if st.sidebar.button("🗑️ 全部重置并从头开始", type="primary"):
+            st.session_state.confirming_reset = True
+            st.rerun()
+
 
 # --- 主入口函数 ---
 def run():
     """这是被 app.py 调用的主入口函数，用于构建Streamlit界面。"""
+
 
     for dir_path in [Config.INPUT_DIR, Config.OUTPUT_DIR, Config.TEMPLATE_DIR, Config.PROCESSED_FOLDER, Config.UNPROCESSED_FOLDER]:
         os.makedirs(dir_path, exist_ok=True)
