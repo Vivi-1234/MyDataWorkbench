@@ -52,9 +52,6 @@ available_models = [
 if 'selected_model' not in st.session_state:
     st.session_state.selected_model = available_models[0] # 默认选择第一个
 
-# --- 应用主标题 ---
-st.title("✅ Allen工作台")
-
 # --- 5. 侧边栏导航 ---
 st.sidebar.title("工具箱")
 
@@ -71,6 +68,7 @@ st.sidebar.markdown("---")
 
 # 定义工具的显示名称映射
 tool_display_names = {
+    "image_processor": "图片批量处理器",
     "MulebuyPics": "Mulebuy图片",
     "Affiliate_data": "联盟数据",
     "Translator": "文案优化"
@@ -88,10 +86,11 @@ st.sidebar.markdown("---")
 selected_tool_name = st.session_state.selected_tool
 
 if not selected_tool_name:
+    st.title("✅ Allen工作台")
     st.error("在 'tools' 文件夹中未发现任何可用工具。")
 else:
     display_name = tool_display_names.get(selected_tool_name, selected_tool_name)
-    st.caption(f"当前工具: {display_name}")
+    st.title(f"✅ {display_name}")
     st.markdown("---")
     
     # 动态加载并执行选中的工具
