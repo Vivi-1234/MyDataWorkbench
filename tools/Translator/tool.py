@@ -84,7 +84,7 @@ CURRENT ({target_lang}): "{original_translation}"
 
 # ----------------- 工具的公开入口函数 -----------------
 def run():
-    st.subheader("AI 辅助本地化(L10n)文案优化工具")
+    st.subheader("文案优化工具")
     st.info("本工具以本地EN文件夹为基准，利用AI优化和修正您上传的目标语言文件夹中的文案。")
     
     tool_dir = os.path.dirname(__file__)

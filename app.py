@@ -7,8 +7,8 @@ import importlib
 # --- 1. 页面基础配置 ---
 st.set_page_config(
     layout="wide", 
-    page_title="Mulebuy 模块化作战室",
-    page_icon="🧩"
+    page_title="Allen工作台",
+    page_icon="✅"
 )
 
 # --- 2. 注入CSS ---
@@ -53,7 +53,7 @@ if 'selected_model' not in st.session_state:
     st.session_state.selected_model = available_models[0] # 默认选择第一个
 
 # --- 应用主标题 ---
-st.title("🧩 Mulebuy 模块化作战室")
+st.title("✅ Allen工作台")
 
 # --- 5. 侧边栏导航 ---
 st.sidebar.title("工具箱")
@@ -69,8 +69,17 @@ st.sidebar.info(f"当前激活: **{st.session_state.selected_model}**")
 st.sidebar.markdown("---")
 
 
+# 定义工具的显示名称映射
+tool_display_names = {
+    "MulebuyPics": "Mulebuy图片",
+    "Affiliate_data": "联盟数据",
+    "Translator": "文案优化"
+}
+
 for tool_name in available_tools:
-    if st.sidebar.button(tool_name, use_container_width=True):
+    # 获取显示名称，如果找不到映射，则使用原始文件夹名
+    display_name = tool_display_names.get(tool_name, tool_name)
+    if st.sidebar.button(display_name, use_container_width=True):
         st.session_state.selected_tool = tool_name
         st.rerun()
 st.sidebar.markdown("---")
@@ -81,8 +90,8 @@ selected_tool_name = st.session_state.selected_tool
 if not selected_tool_name:
     st.error("在 'tools' 文件夹中未发现任何可用工具。")
 else:
-    st.header(f"正在使用工具: {selected_tool_name}")
-
+    display_name = tool_display_names.get(selected_tool_name, selected_tool_name)
+    st.caption(f"当前工具: {display_name}")
     st.markdown("---")
     
     # 动态加载并执行选中的工具
