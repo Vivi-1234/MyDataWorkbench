@@ -191,8 +191,13 @@ def process_template_task(args):
 # --- 状态管理 ---
 def save_state():
     """保存 session state 到文件"""
-    state_keys = ['current_step', 'match_threshold', 'download_complete', 'filter_complete', 'template_process_complete']
-    state = {key: st.session_state.get(key) for key in state_keys if key in st.session_state}
+    state = {
+        'current_step': st.session_state.get('current_step', 1),
+        'match_threshold': st.session_state.get('match_threshold', 0.8),
+        'download_complete': st.session_state.get('download_complete', False),
+        'filter_complete': st.session_state.get('filter_complete', False),
+        'template_process_complete': st.session_state.get('template_process_complete', False)
+    }
     with open(Config.STATE_FILE_PATH, 'w') as f:
         json.dump(state, f)
 
