@@ -22,7 +22,10 @@ class Config:
     TEMPLATE_DIR = os.path.join(BASE_PATH, 'templates')
     
     URL_FILE_PATH = os.path.join(INPUT_DIR, 'qc.txt')
+
     STATE_FILE_PATH = os.path.join(INPUT_DIR, 'state.json')
+
+  
     PROCESSED_FOLDER = os.path.join(OUTPUT_DIR, 'processed_images')
     UNPROCESSED_FOLDER = os.path.join(OUTPUT_DIR, 'unprocessed_images')
     DUPLICATE_LOG_FILE = os.path.join(OUTPUT_DIR, 'duplicate_urls_log.txt')
@@ -41,6 +44,9 @@ class Config:
     MIN_ASPECT_RATIO = 0.3
     MAX_ASPECT_RATIO = 7.0
     MIN_RED_TO_WHITE_RATIO = 0.01
+    MIN_TOTAL_AREA_RATIO = 0.0001 # 示例值，需要调整
+    MIN_ASPECT_RATIO = 0.5       # 示例值，需要调整
+    MAX_ASPECT_RATIO = 5.0       # 示例值，需要调整
 
 # --- 全局模板变量 ---
 templates_g = []
@@ -203,10 +209,12 @@ def save_state():
     """保存 session state 到文件"""
     state = {
         'current_step': st.session_state.get('current_step', 1),
+
         'match_threshold': st.session_state.get('match_threshold', 0.8),
         'download_complete': st.session_state.get('download_complete', False),
         'filter_complete': st.session_state.get('filter_complete', False),
         'template_process_complete': st.session_state.get('template_process_complete', False)
+
     }
     with open(Config.STATE_FILE_PATH, 'w') as f:
         json.dump(state, f)
@@ -250,8 +258,7 @@ def initialize_state(force=False):
             save_state()
 
 
-# --- UI 渲染函数 ---
-
+# --- UI 渲染函数 --
 
 def render_step_1():
     """渲染步骤1的UI：上传与下载"""
@@ -336,8 +343,9 @@ def render_step_1():
                     - ❌ **失败 (HTTP/网络)**: {sum(v for k, v in results_counter.items() if k.startswith('http_error') or k == 'error')}
                     - 🔒 **失败 (SSL证书问题)**: {results_counter['ssl_error']}
                     """)
-            
+          
             st.session_state.download_complete = True
+
             save_state()
             st.rerun()
 
@@ -520,11 +528,13 @@ def render_reset_ui():
         initialize_state(force=True)
         st.success("所有进度和文件已重置！")
         time.sleep(1)
+
         st.rerun()
 
 # --- 主入口函数 ---
 def run():
     """这是被 app.py 调用的主入口函数，用于构建Streamlit界面。"""
+
     for dir_path in [Config.INPUT_DIR, Config.OUTPUT_DIR, Config.TEMPLATE_DIR, Config.PROCESSED_FOLDER, Config.UNPROCESSED_FOLDER]:
         os.makedirs(dir_path, exist_ok=True)
         
@@ -545,3 +555,4 @@ def run():
         render_step_3()
     elif st.session_state.current_step == 4:
         render_step_4()
+
