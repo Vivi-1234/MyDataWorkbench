@@ -76,7 +76,7 @@ def download_image(url):
         if os.path.exists(file_path):
             return "skipped"
 
-        response = requests.get(url, stream=True, timeout=20, verify=True)
+        response = requests.get(url, stream=True, timeout=20, verify=False)
         if response.status_code == 200:
             with open(file_path, 'wb') as f:
                 for chunk in response.iter_content(8192):
