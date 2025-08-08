@@ -1,2 +1,5 @@
 google-cloud-firestore
 firebase-admin
+opencv-python
+numpy
+tqdm
