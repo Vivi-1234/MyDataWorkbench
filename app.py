@@ -1,139 +1,232 @@
 import sys
 import os
-import importlib
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox
-)
-from PySide6.QtCore import QSize, Qt
+import json
+import pandas as pd
+import shutil
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PySide6.QtCore import QObject, Slot, QUrl, QFileInfo
+from PySide6.QtWebEngineCore import QWebEnginePage
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebChannel import QWebChannel
+from tools.image_processor.backend import ImageProcessorBackend
+from tools.translator.backend import TranslatorBackend
 
+# --- Backend Class ---
+# This class will contain all Python logic callable from JavaScript
+class Backend(QObject):
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window
+        # Create instances of modular backends
+        self.image_processor = ImageProcessorBackend(main_window)
+        self.translator = TranslatorBackend(main_window)
+
+    @Slot(str, result=str)
+    def get_tool_html(self, tool_name):
+        """Loads the HTML content for a given tool."""
+        # Correct path construction
+        tool_html_path = os.path.join(os.path.dirname(__file__), "frontend", "tools", f"{tool_name}.html")
+        if os.path.exists(tool_html_path):
+            with open(tool_html_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        return f"<h2 class='text-red-500'>错误: 未找到工具界面文件 {tool_name}.html</h2>"
+
+    # --- Affiliate Data Tool Methods ---
+    def __init__(self):
+        super().__init__()
+        self.df_users_full, self.df_orders_full, self.df_packages_full = None, None, None
+
+    def _load_affiliate_data(self):
+        if self.df_users_full is not None: return True
+        try:
+            DATA_PATH = os.path.join(os.path.dirname(__file__), 'tools', 'Affiliate_data', 'data')
+            users_path = os.path.join(DATA_PATH, 'wp_users_affilate_tmp.csv')
+            orders_path = os.path.join(DATA_PATH, 'wp_erp_order_tmp.csv')
+            packages_path = os.path.join(DATA_PATH, 'wp_erp_packeage_tmp.csv')
+
+            self.df_users_full = pd.read_csv(users_path, encoding='gb18030')
+            self.df_orders_full = pd.read_csv(orders_path, encoding='gb18030')
+            self.df_packages_full = pd.read_csv(packages_path, encoding='gb18030')
+
+            for df in [self.df_users_full, self.df_orders_full, self.df_packages_full]:
+                for col in df.columns:
+                    if 'time' in col: df[col] = pd.to_datetime(df[col], errors='coerce')
+            return True
+        except Exception as e:
+            print(f"Error loading affiliate data: {e}")
+            return False
+
+    @Slot(int, str, str, result=str)
+    def generate_affiliate_report(self, affiliate_id, start_date_str, end_date_str):
+        if not self._load_affiliate_data():
+            return json.dumps({"error": "无法加载数据文件，请检查服务器日志。"})
+
+        try:
+            start_date = pd.to_datetime(f"{start_date_str} 00:00:00")
+            end_date = pd.to_datetime(f"{end_date_str} 23:59:59")
+
+            df_users = self.df_users_full[self.df_users_full['affilate'] == affiliate_id]
+            df_orders = self.df_orders_full[self.df_orders_full['affilate'] == affiliate_id]
+            df_packages = self.df_packages_full[self.df_packages_full['affilate'] == affiliate_id]
+
+            if df_users.empty and df_orders.empty and df_packages.empty:
+                return json.dumps({"error": f"找不到网红ID {affiliate_id} 的任何记录。"})
+
+            users_reg = df_users[(df_users['reg_time'] >= start_date) & (df_users['reg_time'] <= end_date)]
+            users_verified = df_users[(df_users['verified_time'] >= start_date) & (df_users['verified_time'] <= end_date)]
+            users_active = df_users[(df_users['activate_time'] >= start_date) & (df_users['activate_time'] <= end_date)]
+            orders = df_orders[(df_orders['create_time'] >= start_date) & (df_orders['create_time'] <= end_date)]
+            packages = df_packages[(df_packages['create_time'] >= start_date) & (df_packages['create_time'] <= end_date)]
+
+            metrics = {
+                "注册用户数": len(users_reg), "激活用户数": len(users_verified), "活跃人数": len(users_active),
+                "下单人数": int(orders['uid'].nunique()), "下单数量": len(orders), "下单总金额": float(orders['total_cny'].sum()),
+                "提包人数": int(packages['uid'].nunique()), "提包数量": len(packages), "提包总金额": float(packages['total_cny'].sum()),
+            }
+            metrics["收单总金额"] = metrics["下单总金额"] + metrics["提包总金额"]
+
+            return json.dumps(metrics)
+
+        except Exception as e:
+            print(f"Error generating report: {e}")
+            return json.dumps({"error": f"生成报告时出错: {e}"})
+
+    # --- Mulebuy Pics Tool Methods ---
+    @Slot(result=str)
+    def get_mulebuy_image_data(self):
+        try:
+            DATA_PATH = os.path.join(os.path.dirname(__file__), 'tools', 'MulebuyPics', 'data')
+            os.makedirs(DATA_PATH, exist_ok=True)
+
+            categories = sorted([d for d in os.listdir(DATA_PATH) if os.path.isdir(os.path.join(DATA_PATH, d))])
+
+            uncategorized_path = QUrl.fromLocalFile(DATA_PATH).toString()
+            uncategorized_images = sorted([
+                uncategorized_path + '/' + f for f in os.listdir(DATA_PATH)
+                if os.path.isfile(os.path.join(DATA_PATH, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))
+            ])
+
+            result = {
+                "categories": categories,
+                "uncategorized": { "path": uncategorized_path, "images": uncategorized_images },
+                "categorized": []
+            }
+
+            for category in categories:
+                category_path_str = os.path.join(DATA_PATH, category)
+                category_url = QUrl.fromLocalFile(category_path_str).toString()
+                images = sorted([
+                    category_url + '/' + f for f in os.listdir(category_path_str)
+                    if os.path.isfile(os.path.join(category_path_str, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))
+                ])
+                result["categorized"].append({ "name": category, "path": category_url, "images": images })
+
+            return json.dumps(result)
+        except Exception as e:
+            return json.dumps({"error": f"Error getting image data: {e}"})
+
+    @Slot(str, result=str)
+    def create_mulebuy_category(self, name):
+        try:
+            if not name or not name.strip(): return json.dumps({"success": False, "error": "分类名称不能为空。"})
+            path = os.path.join(os.path.dirname(__file__), 'tools', 'MulebuyPics', 'data', name)
+            os.makedirs(path, exist_ok=True)
+            return json.dumps({"success": True})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+    @Slot(str, result=str)
+    def delete_mulebuy_images(self, paths_str):
+        try:
+            paths_to_delete = json.loads(paths_str)
+            for url_str in paths_to_delete:
+                path = QUrl(url_str).toLocalFile()
+                if os.path.exists(path):
+                    os.remove(path)
+            return json.dumps({"success": True})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+    @Slot(list, str, result=str)
+    def move_mulebuy_images(self, paths_str, destination_category):
+        try:
+            paths_to_move = json.loads(paths_str)
+            DATA_PATH = os.path.join(os.path.dirname(__file__), 'tools', 'MulebuyPics', 'data')
+            destination_path = DATA_PATH if destination_category == "未分类" else os.path.join(DATA_PATH, destination_category)
+            for url_str in paths_to_move:
+                source_path = QUrl(url_str).toLocalFile()
+                if os.path.exists(source_path):
+                    shutil.move(source_path, os.path.join(destination_path, os.path.basename(source_path)))
+            return json.dumps({"success": True})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+    @Slot(str, result=str)
+    def delete_mulebuy_category(self, name):
+        try:
+            path = os.path.join(os.path.dirname(__file__), 'tools', 'MulebuyPics', 'data', name)
+            if len(os.listdir(path)) > 0:
+                return json.dumps({"success": False, "error": "无法删除：该分类不为空。"})
+            shutil.rmtree(path)
+            return json.dumps({"success": True})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+    @Slot(str, str, result=str)
+    def rename_mulebuy_category(self, old_name, new_name):
+        try:
+            DATA_PATH = os.path.join(os.path.dirname(__file__), 'tools', 'MulebuyPics', 'data')
+            os.rename(os.path.join(DATA_PATH, old_name), os.path.join(DATA_PATH, new_name))
+            return json.dumps({"success": True})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+    @Slot(result=str)
+    def open_image_file_dialog(self):
+        file_paths, _ = QFileDialog.getOpenFileNames(None, "选择图片", "", "Images (*.png *.jpg *.jpeg)")
+        return json.dumps(file_paths)
+
+    @Slot(list, str, result=str)
+    def upload_mulebuy_images(self, source_paths, target_category):
+        try:
+            DATA_PATH = os.path.join(os.path.dirname(__file__), 'tools', 'MulebuyPics', 'data')
+            save_path = DATA_PATH if target_category == "未分类" else os.path.join(DATA_PATH, target_category)
+            for path in source_paths:
+                shutil.copy(path, os.path.join(save_path, os.path.basename(path)))
+            return json.dumps({"success": True})
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)})
+
+# --- Main Window ---
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.setWindowTitle("Allen工作台")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1440, 900)
 
-        # --- Main Layout ---
-        main_widget = QWidget()
-        main_layout = QHBoxLayout(main_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        # --- Web Engine View ---
+        self.view = QWebEngineView()
 
-        # --- Sidebar ---
-        sidebar_widget = QWidget()
-        sidebar_widget.setFixedWidth(220)
-        sidebar_layout = QVBoxLayout(sidebar_widget)
+        # --- Web Channel Setup ---
+        self.channel = QWebChannel()
+        self.backend = Backend(self) # Pass main_window instance
+        self.channel.registerObject("pyBackend", self.backend)
+        self.channel.registerObject("pyIpBackend", self.backend.image_processor)
+        self.channel.registerObject("pyTranslatorBackend", self.backend.translator)
+        self.view.page().setWebChannel(self.channel)
 
-        # AI Model Selector
-        sidebar_layout.addWidget(QLabel("🧠 AI模型选择:"))
-        self.model_selector = QComboBox()
-        self.available_models = [
-            "mulebuy-optimizer", "llama3.1:latest", "qwen3:8b", "gemma3:4b", "gpt-oss:20b"
-        ]
-        self.model_selector.addItems(self.available_models)
-        sidebar_layout.addWidget(self.model_selector)
-        sidebar_layout.addWidget(QLabel("---------------------")) # Separator
+        # --- Load HTML ---
+        # Use an absolute path to ensure it works regardless of where the script is run
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend", "index.html"))
+        self.view.setUrl(QUrl.fromLocalFile(file_path))
 
-        self.tool_list_widget = QListWidget()
-        self.tool_list_widget.itemClicked.connect(self.switch_tool)
-        sidebar_layout.addWidget(self.tool_list_widget)
-
-        # --- Central Widget Area ---
-        self.stacked_widget = QStackedWidget()
-
-        main_layout.addWidget(sidebar_widget)
-        main_layout.addWidget(self.stacked_widget)
-
-        self.setCentralWidget(main_widget)
-
-        self.tool_widgets = {}
-        self.load_tools()
-
-    def get_selected_model(self):
-        return self.model_selector.currentText()
-
-    def load_tools(self):
-        """Scans 'tools', finds pyside_tool.py, and loads the widget."""
-        tools_dir = "tools"
-        tool_display_names = {
-            "image_processor": "图片批量处理器",
-            "MulebuyPics": "Mulebuy图片",
-            "Affiliate_data": "联盟数据",
-            "Translator": "文案优化"
-        }
-
-        welcome_widget = QLabel("欢迎使用 Allen 工作台\n\n请从左侧选择一个工具")
-        welcome_widget.setAlignment(Qt.AlignCenter)
-        self.stacked_widget.addWidget(welcome_widget)
-
-        available_tools = [d for d in os.listdir(tools_dir) if os.path.isdir(os.path.join(tools_dir, d)) and not d.startswith('__')]
-
-        for tool_name in available_tools:
-            display_name = tool_display_names.get(tool_name, tool_name)
-            item = QListWidgetItem(display_name)
-            item.setData(Qt.UserRole, tool_name)
-            self.tool_list_widget.addItem(item)
-
-            tool_widget = self.load_tool_widget(tool_name, display_name)
-            self.stacked_widget.addWidget(tool_widget)
-            self.tool_widgets[tool_name] = tool_widget
-
-        if self.tool_list_widget.count() > 0:
-            self.tool_list_widget.setCurrentRow(0)
-            self.switch_tool(self.tool_list_widget.item(0))
-
-    def load_tool_widget(self, tool_name, display_name):
-        """Dynamically loads a widget from a tool's pyside_tool.py file."""
-        try:
-            module_path = f"tools.{tool_name}.pyside_tool"
-            tool_module = importlib.import_module(module_path)
-
-            # Find the QWidget class in the module
-            for attribute_name in dir(tool_module):
-                attribute = getattr(tool_module, attribute_name)
-                if isinstance(attribute, type) and issubclass(attribute, QWidget) and attribute is not QWidget:
-                    print(f"Found widget {attribute_name} in {tool_name}")
-                    return attribute(main_window=self) # Pass main window instance
-
-            # Fallback if no specific widget is found
-            return self.create_placeholder_widget(f"{display_name}\n\n在pyside_tool.py中未找到QWidget。")
-
-        except ImportError as e:
-            print(f"Could not import {module_path}: {e}")
-            return self.create_placeholder_widget(f"无法加载工具: {display_name}\n\n请确保 'pyside_tool.py' 文件存在。")
-        except Exception as e:
-            print(f"Error loading widget for {tool_name}: {e}")
-            return self.create_placeholder_widget(f"加载 {display_name} 时出错。")
-
-    def create_placeholder_widget(self, text):
-        """Creates a standard placeholder widget."""
-        widget = QLabel(text)
-        widget.setAlignment(Qt.AlignCenter)
-        widget.setWordWrap(True)
-        return widget
-
-    def switch_tool(self, item):
-        """Switches the view in the QStackedWidget to the selected tool."""
-        tool_name = item.data(Qt.UserRole)
-
-        # This logic will be expanded later to load the actual tool widget
-        if tool_name in self.tool_widgets:
-            widget_to_display = self.tool_widgets[tool_name]
-            self.stacked_widget.setCurrentWidget(widget_to_display)
-        else:
-            # This case handles the welcome screen or any item without a tool_name
-            self.stacked_widget.setCurrentIndex(0)
-
-
-from qt_material import apply_stylesheet
+        self.setCentralWidget(self.view)
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    # This is important for WebEngine to work correctly
+    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'
     
-    # Apply the material theme
-    apply_stylesheet(app, theme='dark_pink.xml')
-
+    app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

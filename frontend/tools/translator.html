@@ -1,0 +1,31 @@
+<div class="space-y-6">
+    <h2 class="text-3xl font-bold text-pink-400">文案优化工具</h2>
+
+    <!-- Step 1: Input -->
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+        <div>
+            <label for="tr-lang-input" class="block text-sm font-medium text-gray-300 mb-1">1. 输入目标语言</label>
+            <input type="text" id="tr-lang-input" value="Chinese" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">2. 上传待优化文件</label>
+            <button id="tr-upload-btn" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-md">📂 选择文件 (JSON)</button>
+        </div>
+    </div>
+
+    <!-- Step 2: Preview & Run -->
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+        <label for="tr-file-select" class="block text-sm font-medium text-gray-300">预览文件</label>
+        <select id="tr-file-select" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500"></select>
+        <div id="tr-preview-table" class="h-64 overflow-y-auto border border-gray-700 rounded-md"></div>
+        <button id="tr-run-ai-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🚀 使用AI批量优化</button>
+    </div>
+
+    <!-- Step 3: Review & Download -->
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+        <h3 class="text-xl font-semibold text-pink-400">结果审查</h3>
+        <div id="tr-review-tabs"></div>
+        <div id="tr-review-content" class="h-64 overflow-y-auto border border-gray-700 rounded-md"></div>
+        <button id="tr-download-btn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 rounded-md">📥 下载结果 (.zip)</button>
+    </div>
+</div>

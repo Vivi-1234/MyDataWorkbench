@@ -1,0 +1,39 @@
+<div class="space-y-6">
+    <h2 class="text-3xl font-bold text-pink-400">图片批量处理器</h2>
+
+    <!-- Step Indicator -->
+    <div id="ip-steps" class="flex justify-between border-b-2 border-gray-700">
+        <button data-step="1" class="ip-step-btn flex-1 p-4 text-center font-semibold border-b-4 border-pink-500 text-white">步骤 1: 下载</button>
+        <button data-step="2" class="ip-step-btn flex-1 p-4 text-center font-semibold border-b-4 border-transparent text-gray-500">步骤 2: 筛选</button>
+        <button data-step="3" class="ip-step-btn flex-1 p-4 text-center font-semibold border-b-4 border-transparent text-gray-500">步骤 3: 模板处理</button>
+        <button data-step="4" class="ip-step-btn flex-1 p-4 text-center font-semibold border-b-4 border-transparent text-gray-500">步骤 4: 校验</button>
+    </div>
+
+    <!-- Step Content -->
+    <div id="ip-step-content" class="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <!-- Step 1: Download -->
+        <div id="ip-step-1" class="ip-step-panel space-y-4">
+            <div class="flex items-center space-x-4">
+                <button id="ip-select-qc-btn" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-md">📂 选择 qc.txt</button>
+                <p id="ip-qc-file-label" class="text-gray-400">未选择文件</p>
+            </div>
+            <button id="ip-start-download-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🚀 开始下载</button>
+            <div class="w-full bg-gray-700 rounded-full h-4">
+                <div id="ip-download-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="ip-download-status" class="text-sm text-gray-400 p-4 bg-gray-900 rounded-md min-h-[100px]">等待操作...</div>
+        </div>
+
+        <!-- Step 2: Filter (hidden by default) -->
+        <div id="ip-step-2" class="ip-step-panel space-y-4 hidden">
+            <p>此步骤将使用颜色识别算法，将明显没有logo的图片移动到“processed”文件夹。</p>
+            <button id="ip-start-filter-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🤖 开始自动筛选</button>
+            <div class="w-full bg-gray-700 rounded-full h-4">
+                <div id="ip-filter-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="ip-filter-status" class="text-sm text-gray-400 p-4 bg-gray-900 rounded-md min-h-[100px]">等待操作...</div>
+        </div>
+
+        <!-- Step 3 & 4 will be similar -->
+    </div>
+</div>
