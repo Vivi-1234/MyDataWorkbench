@@ -22,22 +22,28 @@ class Backend(QObject):
     @Slot(str, result=str)
     def get_tool_html(self, tool_name):
         path = os.path.join(os.path.dirname(__file__), "frontend", "tools", f"{tool_name}.html")
-        if os.path.exists(path):
+        try:
             with open(path, 'r', encoding='utf-8') as f: return f.read()
-        return f"<h2>Error: {tool_name}.html not found</h2>"
+        except FileNotFoundError:
+            return f"<h2 class='text-red-500'>错误: 未找到UI文件 {tool_name}.html</h2>"
 
     @Slot(str, str, result=str)
     def open_file_dialog(self, title, file_filter):
         paths, _ = QFileDialog.getOpenFileNames(self.main_window, title, "", file_filter)
         return json.dumps(paths)
 
-    # --- Affiliate Data Methods ---
+    @Slot(str, result=str)
+    def open_single_file_dialog(self, title, file_filter):
+        path, _ = QFileDialog.getOpenFileName(self.main_window, title, "", file_filter)
+        return path
+
+    # --- Affiliate Data ---
     @Slot(int, str, str, result=str)
     def generate_affiliate_report(self, affiliate_id, start_date_str, end_date_str):
         # ... full implementation ...
         return json.dumps({"注册用户数": 10})
 
-    # --- Mulebuy Pics Methods ---
+    # --- Mulebuy Pics ---
     @Slot(result=str)
     def get_mulebuy_image_data(self):
         # ... full implementation ...
@@ -45,39 +51,43 @@ class Backend(QObject):
 
     # ... other mulebuy methods ...
 
-    # --- Image Processor Methods ---
-    @Slot(result=str)
-    def ip_open_qc_file(self):
-        # ... full implementation ...
-        return ""
+    # --- Image Processor ---
+    @Slot(str, result=str)
+    def ip_select_and_copy_qc_file(self, path):
+        # ... logic to copy file ...
+        return os.path.basename(path)
 
     @Slot()
     def ip_start_download(self):
-        # ... full implementation ...
+        # ... thread setup ...
         pass
 
-    # --- Translator Methods ---
-    @Slot(result=str)
-    def tr_get_base_files(self):
-        # ... full implementation ...
+    # --- Translator ---
+    @Slot(str, result=str)
+    def tr_load_target_files(self, files_str):
+        # ... logic to load json files ...
         return json.dumps({})
 
-    @Slot(str, str, str, str)
-    def tr_start_translation(self, lang, model, base, target):
-        # ... full implementation ...
+    @Slot(str, str, str)
+    def tr_start_translation(self, lang, model, target_files_str):
+        # ... thread setup for translation ...
         pass
-
-# ... Worker classes would be defined here if needed ...
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__(); self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1440, 900)
-        self.view = QWebEngineView(); self.channel = QWebChannel(); self.backend = Backend(self)
-        self.channel.registerObject("pyBackend", self.backend); self.view.page().setWebChannel(self.channel)
+        super().__init__()
+        self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1440, 900)
+        self.view = QWebEngineView()
+        self.channel = QWebChannel(); self.backend = Backend(self)
+        self.channel.registerObject("pyBackend", self.backend)
+        self.view.page().setWebChannel(self.channel)
         file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend", "index.html"))
-        self.view.setUrl(QUrl.fromLocalFile(file_path)); self.setCentralWidget(self.view)
+        print(f"Attempting to load URL: {file_path}") # For debugging
+        self.view.setUrl(QUrl.fromLocalFile(file_path))
+        self.setCentralWidget(self.view)
 
 if __name__ == "__main__":
-    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'; app = QApplication(sys.argv)
+    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'
+    app = QApplication(sys.argv)
     apply_stylesheet(app, theme='dark_pink.xml', extra={'density_scale': '0'})
     window = MainWindow(); window.show(); sys.exit(app.exec())
