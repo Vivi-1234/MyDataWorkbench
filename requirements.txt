@@ -1,4 +1,5 @@
 PySide6
+qt-material
 opencv-python
 numpy
 pandas

@@ -22,6 +22,7 @@ class ThumbnailWidget(QWidget):
     def __init__(self, image_path):
         super().__init__()
         self.image_path = image_path
+        self.setFixedSize(THUMBNAIL_SIZE + 20, THUMBNAIL_SIZE + 40) # Give some padding for checkbox and name
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
 
@@ -32,14 +33,15 @@ class ThumbnailWidget(QWidget):
         layout.addWidget(self.checkbox, alignment=Qt.AlignHCenter)
         layout.addWidget(self.image_label)
 
-        # Load pixmap
+        # Load pixmap with smooth transformation
         pixmap = QPixmap(image_path)
         self.image_label.setPixmap(pixmap.scaled(THUMBNAIL_SIZE, THUMBNAIL_SIZE, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
 # --- Main Widget ---
 class MulebuyPicsWidget(QWidget):
-    def __init__(self):
+    def __init__(self, main_window=None):
         super().__init__()
+        self.main_window = main_window
         os.makedirs(DATA_PATH, exist_ok=True)
 
         main_layout = QHBoxLayout(self)

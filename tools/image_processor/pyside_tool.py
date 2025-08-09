@@ -195,8 +195,9 @@ class ValidationWorker(QObject):
 # --- Main Widget ---
 
 class ImageProcessorWidget(QWidget):
-    def __init__(self):
+    def __init__(self, main_window=None):
         super().__init__()
+        self.main_window = main_window
         self.threads = []
         self.ensure_dirs_exist()
         self.state = {}
@@ -222,6 +223,7 @@ class ImageProcessorWidget(QWidget):
         self.create_all_steps()
         self.update_folder_status()
         self.stacked_widget.setCurrentIndex(self.state.get('current_step', 0))
+        self.refresh_template_list() # Refresh list after UI is fully constructed
 
     def create_all_steps(self):
         self.stacked_widget.addWidget(self.create_step1_ui())
@@ -263,7 +265,7 @@ class ImageProcessorWidget(QWidget):
     def create_step3_ui(self):
         widget = QWidget(); layout = QVBoxLayout(widget)
         layout.addWidget(QLabel("<b>模板管理</b>"))
-        self.template_list = QListWidget(); self.refresh_template_list()
+        self.template_list = QListWidget()
         upload_template_btn = QPushButton("上传模板"); upload_template_btn.clicked.connect(self.upload_templates)
         delete_template_btn = QPushButton("删除选中"); delete_template_btn.clicked.connect(self.delete_template)
         h_layout1 = QHBoxLayout(); h_layout1.addWidget(upload_template_btn); h_layout1.addWidget(delete_template_btn)
@@ -271,14 +273,22 @@ class ImageProcessorWidget(QWidget):
 
         layout.addWidget(QLabel("<b>参数调整</b>"))
         self.threshold_slider = QSlider(Qt.Horizontal); self.threshold_slider.setRange(50, 95); self.threshold_slider.setValue(self.state.get('match_threshold', 0.8) * 100)
-        self.threshold_label = QLabel(f"匹配阈值: {self.threshold_slider.value() / 100.0:.2f}"); self.threshold_slider.valueChanged.connect(lambda v: self.threshold_label.setText(f"匹配阈值: {v/100.0:.2f}"))
-        self.threshold_slider.valueChanged.connect(lambda v: self.state.update({'match_threshold': v/100.0}))
-        layout.addWidget(self.threshold_label); layout.addWidget(self.threshold_slider)
+        self.threshold_label = QLabel(f"匹配阈值: {self.threshold_slider.value() / 100.0:.2f}")
+        self.threshold_slider.valueChanged.connect(self._update_threshold_label)
+        layout.addWidget(self.threshold_label)
+        layout.addWidget(self.threshold_slider)
 
         self.process_button = QPushButton("🔥 开始处理"); self.process_button.clicked.connect(self.start_processing)
         self.process_progress = QProgressBar(); self.process_status = QTextEdit(); self.process_status.setReadOnly(True)
         layout.addWidget(self.process_button); layout.addWidget(self.process_progress); layout.addWidget(self.process_status)
         return self.create_step_ui("步骤 3: 模板匹配", widget, prev_func=lambda: self.change_step(1), next_func=lambda: self.change_step(3))
+
+    def _update_threshold_label(self, value):
+        """Slot to update the threshold label and state."""
+        new_threshold = value / 100.0
+        self.threshold_label.setText(f"匹配阈值: {new_threshold:.2f}")
+        self.state['match_threshold'] = new_threshold
+        # No need to call save_state() on every change, it can be saved when closing or changing step.
 
     def create_step4_ui(self):
         widget = QWidget(); layout = QVBoxLayout(widget)

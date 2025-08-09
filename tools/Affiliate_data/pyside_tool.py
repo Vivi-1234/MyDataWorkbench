@@ -41,8 +41,9 @@ def _calculate_metrics(users_df, orders_df, packages_df, start_date, end_date):
 
 # --- Main Widget ---
 class AffiliateDataWidget(QWidget):
-    def __init__(self):
+    def __init__(self, main_window=None):
         super().__init__()
+        self.main_window = main_window
         self.df_users_full, self.df_orders_full, self.df_packages_full = None, None, None
 
         main_layout = QHBoxLayout(self)
@@ -56,15 +57,14 @@ class AffiliateDataWidget(QWidget):
         main_layout.addWidget(sidebar)
         main_layout.addWidget(report_area, 1)
 
-        self.load_data()
-
     def create_sidebar(self):
         sidebar_widget = QWidget()
         sidebar_layout = QVBoxLayout(sidebar_widget)
         sidebar_widget.setFixedWidth(250)
 
         sidebar_layout.addWidget(QLabel("<b>参数设置</b>"))
-        self.id_input = QSpinBox(); self.id_input.setRange(1, 999999)
+        self.id_input = QSpinBox()
+        self.id_input.setRange(1, 999999999) # Increased limit
         self.start_date_input = QDateEdit(QDate.currentDate())
         self.end_date_input = QDateEdit(QDate.currentDate())
         self.start_date_input.setCalendarPopup(True)
@@ -72,9 +72,6 @@ class AffiliateDataWidget(QWidget):
 
         generate_button = QPushButton("🚀 生成分析报告")
         generate_button.clicked.connect(self.generate_report)
-
-        reload_button = QPushButton("刷新数据源")
-        reload_button.clicked.connect(self.load_data)
 
         sidebar_layout.addWidget(QLabel("输入网红ID:"))
         sidebar_layout.addWidget(self.id_input)
@@ -84,25 +81,31 @@ class AffiliateDataWidget(QWidget):
         sidebar_layout.addWidget(self.end_date_input)
         sidebar_layout.addSpacing(20)
         sidebar_layout.addWidget(generate_button)
-        sidebar_layout.addWidget(reload_button)
         sidebar_layout.addStretch()
         return sidebar_widget
 
     def load_data(self):
+        """Loads data from disk if not already loaded. Returns True on success."""
+        if self.df_users_full is not None:
+            return True # Already loaded
+
         self.df_users_full, self.df_orders_full, self.df_packages_full = _load_data_from_disk(DATA_PATH)
+
         if self.df_users_full is None:
             QMessageBox.critical(self, "错误", f"未在 '{DATA_PATH}' 中找到必需的CSV文件。")
-        else:
-            # Pre-convert date columns for performance
-            for df in [self.df_users_full, self.df_orders_full, self.df_packages_full]:
-                for col in df.columns:
-                    if 'time' in col:
-                        df[col] = pd.to_datetime(df[col], errors='coerce')
-            QMessageBox.information(self, "成功", "数据源已成功加载！")
+            return False
+
+        # Pre-convert date columns for performance
+        for df in [self.df_users_full, self.df_orders_full, self.df_packages_full]:
+            for col in df.columns:
+                if 'time' in col:
+                    df[col] = pd.to_datetime(df[col], errors='coerce')
+        return True
 
     def generate_report(self):
-        if self.df_users_full is None:
-            QMessageBox.warning(self, "数据未加载", "请先成功加载数据源。"); return
+        # Load data on demand
+        if not self.load_data():
+            return # Stop if data loading failed
 
         affiliate_id = self.id_input.value()
         start_date = self.start_date_input.dateTime().toPython()

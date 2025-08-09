@@ -76,8 +76,9 @@ class PandasModel(QStandardItemModel):
         self.setHorizontalHeaderLabels(data.columns)
 
 class TranslatorWidget(QWidget):
-    def __init__(self):
+    def __init__(self, main_window=None):
         super().__init__()
+        self.main_window = main_window
         self.base_files_content, error_msg = _load_base_files_from_disk(BASE_DATA_PATH)
         self.target_files_content = {}
         self.ai_results = {}
@@ -131,16 +132,25 @@ class TranslatorWidget(QWidget):
         QMessageBox.information(self, "成功", f"文件加载成功！共找到 {len(common_files)} 个同名文件可供处理。")
 
     def update_preview(self, filename):
-        if not filename: return
+        if not filename:
+            self.preview_table.setModel(None)
+            return
         base_data = self.base_files_content[filename]
         target_data = self.target_files_content[filename]
         df = pd.DataFrame([{"Key": k, "基准文案 (EN)": v, f"当前文案 ({self.lang_input.text()})": target_data.get(k, "【缺失】")} for k, v in base_data.items()])
-        self.preview_table.setModel(PandasModel(df)); self.preview_table.resizeColumnsToContents()
+        if df.empty:
+            self.preview_table.setModel(None)
+        else:
+            self.preview_table.setModel(PandasModel(df)); self.preview_table.resizeColumnsToContents()
 
     def run_ai_optimization(self):
-        # This should get the model from the main window, but for now, it's hardcoded.
-        # In a real app, you'd pass the main window instance or use a signal/slot mechanism.
-        model = "mulebuy-optimizer"
+        if self.main_window and hasattr(self.main_window, 'get_selected_model'):
+            model = self.main_window.get_selected_model()
+        else:
+            # Fallback if the main window is not available or doesn't have the method
+            model = "mulebuy-optimizer"
+            QMessageBox.warning(self, "警告", "无法获取主窗口的模型选择，将使用默认模型。")
+
         self.run_ai_button.setEnabled(False); self.run_ai_button.setText("处理中...")
 
         self.thread = QThread()
@@ -165,11 +175,17 @@ class TranslatorWidget(QWidget):
 
     def populate_review_tabs(self):
         self.review_tabs.clear()
+        if not self.ai_results:
+            return
         for filename, optimized_data in self.ai_results.items():
             base_data = self.base_files_content[filename]
             target_data = self.target_files_content[filename]
             df = pd.DataFrame([{"Key": k, "基准 (EN)": v, f"原始 ({self.lang_input.text()})": target_data.get(k, "【缺失】"), f"AI优化后 ({self.lang_input.text()})": optimized_data.get(k)} for k, v in base_data.items()])
-            table = QTableView(); table.setModel(PandasModel(df)); table.resizeColumnsToContents()
+
+            table = QTableView()
+            if not df.empty:
+                table.setModel(PandasModel(df))
+                table.resizeColumnsToContents()
             self.review_tabs.addTab(table, filename)
 
     def download_zip(self):

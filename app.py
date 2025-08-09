@@ -21,20 +21,37 @@ class MainWindow(QMainWindow):
         main_layout.setSpacing(0)
 
         # --- Sidebar ---
-        self.sidebar = QListWidget()
-        self.sidebar.setFixedWidth(200)
-        self.sidebar.itemClicked.connect(self.switch_tool)
+        sidebar_widget = QWidget()
+        sidebar_widget.setFixedWidth(220)
+        sidebar_layout = QVBoxLayout(sidebar_widget)
+
+        # AI Model Selector
+        sidebar_layout.addWidget(QLabel("🧠 AI模型选择:"))
+        self.model_selector = QComboBox()
+        self.available_models = [
+            "mulebuy-optimizer", "llama3.1:latest", "qwen3:8b", "gemma3:4b", "gpt-oss:20b"
+        ]
+        self.model_selector.addItems(self.available_models)
+        sidebar_layout.addWidget(self.model_selector)
+        sidebar_layout.addWidget(QLabel("---------------------")) # Separator
+
+        self.tool_list_widget = QListWidget()
+        self.tool_list_widget.itemClicked.connect(self.switch_tool)
+        sidebar_layout.addWidget(self.tool_list_widget)
 
         # --- Central Widget Area ---
         self.stacked_widget = QStackedWidget()
 
-        main_layout.addWidget(self.sidebar)
+        main_layout.addWidget(sidebar_widget)
         main_layout.addWidget(self.stacked_widget)
 
         self.setCentralWidget(main_widget)
 
         self.tool_widgets = {}
         self.load_tools()
+
+    def get_selected_model(self):
+        return self.model_selector.currentText()
 
     def load_tools(self):
         """Scans 'tools', finds pyside_tool.py, and loads the widget."""
@@ -56,15 +73,15 @@ class MainWindow(QMainWindow):
             display_name = tool_display_names.get(tool_name, tool_name)
             item = QListWidgetItem(display_name)
             item.setData(Qt.UserRole, tool_name)
-            self.sidebar.addItem(item)
+            self.tool_list_widget.addItem(item)
 
             tool_widget = self.load_tool_widget(tool_name, display_name)
             self.stacked_widget.addWidget(tool_widget)
             self.tool_widgets[tool_name] = tool_widget
 
-        if self.sidebar.count() > 0:
-            self.sidebar.setCurrentRow(0)
-            self.switch_tool(self.sidebar.item(0))
+        if self.tool_list_widget.count() > 0:
+            self.tool_list_widget.setCurrentRow(0)
+            self.switch_tool(self.tool_list_widget.item(0))
 
     def load_tool_widget(self, tool_name, display_name):
         """Dynamically loads a widget from a tool's pyside_tool.py file."""
@@ -77,7 +94,7 @@ class MainWindow(QMainWindow):
                 attribute = getattr(tool_module, attribute_name)
                 if isinstance(attribute, type) and issubclass(attribute, QWidget) and attribute is not QWidget:
                     print(f"Found widget {attribute_name} in {tool_name}")
-                    return attribute() # Instantiate the widget
+                    return attribute(main_window=self) # Pass main window instance
 
             # Fallback if no specific widget is found
             return self.create_placeholder_widget(f"{display_name}\n\n在pyside_tool.py中未找到QWidget。")
@@ -109,23 +126,13 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(0)
 
 
-def load_stylesheet():
-    """Loads an external QSS stylesheet."""
-    style_file = "styles.qss"
-    if os.path.exists(style_file):
-        with open(style_file, "r") as f:
-            return f.read()
-    else:
-        print(f"Warning: Stylesheet '{style_file}' not found.")
-        return ""
+from qt_material import apply_stylesheet
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    # Apply the stylesheet
-    stylesheet = load_stylesheet()
-    if stylesheet:
-        app.setStyleSheet(stylesheet)
+    # Apply the material theme
+    apply_stylesheet(app, theme='dark_pink.xml')
 
     window = MainWindow()
     window.show()
