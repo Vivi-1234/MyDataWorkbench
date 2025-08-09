@@ -67,7 +67,8 @@ class MainWindow(QMainWindow):
         tools_dir = "tools"
         tool_map = {
             "Affiliate_data": "联盟数据", "image_processor": "图片批量处理器",
-            "Translator": "文案优化", "AI_Chat": "AI聊天"
+            "Translator": "文案优化", "AI_Chat": "AI聊天",
+            "Test_Tool": "调试工具"
         }
         available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and os.path.isdir(os.path.join(tools_dir, d))])
 
@@ -94,10 +95,8 @@ class MainWindow(QMainWindow):
     def get_selected_model(self): return self.model_selector.currentText()
 
 if __name__ == "__main__":
-    # Set High DPI scaling attributes before creating the application
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
+    # High DPI scaling is on by default in recent Qt versions,
+    # the explicit flags are deprecated and can be removed.
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET)
