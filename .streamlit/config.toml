@@ -1,0 +1,15 @@
+[theme]
+# 主强调色 (按钮等) - 使用您喜欢的粉色
+primaryColor="#ff69b4"
+
+# 主背景色
+backgroundColor="#1a1a1a"
+
+# 次级背景色 (如侧边栏)
+secondaryBackgroundColor="#262626"
+
+# 文本颜色
+textColor="#f0f2f6"
+
+# 字体
+font="sans serif"
