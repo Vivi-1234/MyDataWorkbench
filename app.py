@@ -94,7 +94,10 @@ class MainWindow(QMainWindow):
     def get_selected_model(self): return self.model_selector.currentText()
 
 if __name__ == "__main__":
-    if sys.platform == 'win32': os.environ['QT_FONT_DPI'] = '96'
+    # Set High DPI scaling attributes before creating the application
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET)
