@@ -7,39 +7,33 @@ from PySide6.QtCore import Qt
 
 STYLESHEET = """
 QWidget {
-    background-color: #18181b; color: #d4d4d8;
-    font-family: 'Segoe UI', sans-serif;
+    background-color: #18181b; color: #d4d4d8; font-family: 'Segoe UI', sans-serif;
 }
 QMainWindow { background-color: #09090b; }
-QLabel { color: #d4d4d8; }
 QLabel#title { font-size: 18px; font-weight: bold; color: #f43f5e; }
-QListWidget { background-color: #27272a; border: none; }
+QListWidget { background-color: #27272a; border: none; font-size: 14px; padding: 5px; }
 QListWidget::item { padding: 12px 18px; border-radius: 5px; margin: 2px 5px; }
 QListWidget::item:hover { background-color: #3f3f46; }
 QListWidget::item:selected { background-color: #f43f5e; color: #ffffff; }
 QPushButton {
-    background-color: #e11d48; color: #ffffff; border: none;
+    background-color: #be185d; color: #ffffff; border: none;
     padding: 8px 16px; font-size: 13px; border-radius: 5px;
 }
-QPushButton:hover { background-color: #be123c; }
+QPushButton:hover { background-color: #9d174d; }
 QPushButton:disabled { background-color: #52525b; color: #a1a1aa; }
-QComboBox {
-    background-color: #3f3f46; border-radius: 3px; padding: 5px;
-    border: 1px solid #52525b;
-}
-QLineEdit, QTextEdit, QSpinBox {
-    background-color: #3f3f46; border: 1px solid #52525b;
-    padding: 5px; border-radius: 3px;
+QComboBox { background-color: #3f3f46; border-radius: 3px; padding: 5px; border: 1px solid #52525b; }
+QLineEdit, QTextEdit, QSpinBox, QDateEdit {
+    background-color: #3f3f46; border: 1px solid #52525b; padding: 5px; border-radius: 3px;
 }
 QProgressBar { border: 1px solid #52525b; border-radius: 5px; text-align: center; color: #d4d4d8; }
-QProgressBar::chunk { background-color: #e11d48; border-radius: 4px; margin: 1px; }
+QProgressBar::chunk { background-color: #be185d; }
+QGroupBox { font-weight: bold; }
 """
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Allen工作台")
-        self.setGeometry(100, 100, 1366, 768)
+        self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1366, 768)
 
         main_widget = QWidget()
         main_layout = QHBoxLayout(main_widget)
@@ -65,7 +59,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(sidebar_widget); main_layout.addWidget(self.stack)
         self.setCentralWidget(main_widget)
 
-        self.tool_widgets = {}
         self.load_tools()
 
     def load_tools(self):
@@ -74,8 +67,7 @@ class MainWindow(QMainWindow):
             "Affiliate_data": "联盟数据", "MulebuyPics": "Mulebuy图片",
             "image_processor": "图片批量处理器", "Translator": "文案优化"
         }
-
-        available_tools = [d for d in os.listdir(tools_dir) if d in tool_map and os.path.isdir(os.path.join(tools_dir, d))]
+        available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and os.path.isdir(os.path.join(tools_dir, d))])
 
         for tool_name in available_tools:
             display_name = tool_map.get(tool_name)
