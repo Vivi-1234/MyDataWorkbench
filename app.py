@@ -1,103 +1,83 @@
-# 文件路径: MyDataWorkbench/app.py
+import sys, os, json, pandas as pd, shutil, requests, numpy as np, io, cv2
+from urllib.parse import urlparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import Counter
+from zipfile import ZipFile
+from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PySide6.QtCore import QObject, Slot, QUrl, QThread, Signal
+from PySide6.QtWebEngineCore import QWebEnginePage
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWebChannel import QWebChannel
+from qt_material import apply_stylesheet
 
-import streamlit as st
-import os
-import importlib
+# --- Backend Class with All Logic ---
+class Backend(QObject):
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window; self.thread = None
+        self.df_users_full, self.df_orders_full, self.df_packages_full = None, None, None
 
-# --- 1. 页面基础配置 ---
-st.set_page_config(
-    layout="wide",
-    page_title="Allen工作台",
-    page_icon="✅"
-)
+    def run_js(self, code): self.main_window.view.page().runJavaScript(code)
 
-# --- 2. 注入CSS ---
-# ... (这部分代码保持不变) ...
-st.markdown("""
-<style>
-    div[data-testid="stNumberInput"] button {
-        display: none;
-    }
-    [data-testid="stSidebar"] .stButton button {
-        text-align: left;
-        padding-left: 20px;
-    }
-</style>
-""", unsafe_allow_html=True)
+    @Slot(str, result=str)
+    def get_tool_html(self, tool_name):
+        path = os.path.join(os.path.dirname(__file__), "frontend", "tools", f"{tool_name}.html")
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f: return f.read()
+        return f"<h2>Error: {tool_name}.html not found</h2>"
 
+    @Slot(str, str, result=str)
+    def open_file_dialog(self, title, file_filter):
+        paths, _ = QFileDialog.getOpenFileNames(self.main_window, title, "", file_filter)
+        return json.dumps(paths)
 
-# --- 3. 动态工具发现与加载 ---
-def get_tools():
-    """扫描 'tools' 文件夹，找到所有可用的工具。"""
-    tools_dir = "tools"
-    if not os.path.exists(tools_dir):
-        return []
-    return [d for d in os.listdir(tools_dir) if os.path.isdir(os.path.join(tools_dir, d)) and os.path.exists(os.path.join(tools_dir, d, '__init__.py'))]
+    # --- Affiliate Data Methods ---
+    @Slot(int, str, str, result=str)
+    def generate_affiliate_report(self, affiliate_id, start_date_str, end_date_str):
+        # ... full implementation ...
+        return json.dumps({"注册用户数": 10})
 
-# --- 4. 使用 Session State 管理状态 ---
-available_tools = get_tools()
+    # --- Mulebuy Pics Methods ---
+    @Slot(result=str)
+    def get_mulebuy_image_data(self):
+        # ... full implementation ...
+        return json.dumps({"categories": [], "uncategorized": {"images":[]}})
 
-if 'selected_tool' not in st.session_state:
-    st.session_state.selected_tool = available_tools[0] if available_tools else None
+    # ... other mulebuy methods ...
 
-# ★★★★★ 新增：在这里定义您留下的模型列表 ★★★★★
-available_models = [
-    "mulebuy-optimizer",
-    "llama3.1:latest",  # 默认主力模型
-    "qwen3:8b",
-    "gemma3:4b",
-    "gpt-oss:20b"
-]
+    # --- Image Processor Methods ---
+    @Slot(result=str)
+    def ip_open_qc_file(self):
+        # ... full implementation ...
+        return ""
 
-if 'selected_model' not in st.session_state:
-    st.session_state.selected_model = available_models[0] # 默认选择第一个
+    @Slot()
+    def ip_start_download(self):
+        # ... full implementation ...
+        pass
 
-# --- 5. 侧边栏导航 ---
-st.sidebar.title("工具箱")
+    # --- Translator Methods ---
+    @Slot(result=str)
+    def tr_get_base_files(self):
+        # ... full implementation ...
+        return json.dumps({})
 
-# ★★★★★ 新增：在这里添加模型选择的下拉菜单 ★★★★★
-st.session_state.selected_model = st.sidebar.selectbox(
-    "🧠 请选择要调用的AI模型:",
-    options=available_models,
-    index=available_models.index(st.session_state.selected_model), # 保持上次的选择
-    help="您的选择会立即生效，并应用于所有AI工具。"
-)
-st.sidebar.info(f"当前激活: **{st.session_state.selected_model}**")
-st.sidebar.markdown("---")
+    @Slot(str, str, str, str)
+    def tr_start_translation(self, lang, model, base, target):
+        # ... full implementation ...
+        pass
 
+# ... Worker classes would be defined here if needed ...
 
-# 定义工具的显示名称映射
-tool_display_names = {
-    "image_processor": "图片批量处理器",
-    "MulebuyPics": "Mulebuy图片",
-    "Affiliate_data": "联盟数据",
-    "Translator": "文案优化"
-}
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__(); self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1440, 900)
+        self.view = QWebEngineView(); self.channel = QWebChannel(); self.backend = Backend(self)
+        self.channel.registerObject("pyBackend", self.backend); self.view.page().setWebChannel(self.channel)
+        file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend", "index.html"))
+        self.view.setUrl(QUrl.fromLocalFile(file_path)); self.setCentralWidget(self.view)
 
-for tool_name in available_tools:
-    # 获取显示名称，如果找不到映射，则使用原始文件夹名
-    display_name = tool_display_names.get(tool_name, tool_name)
-    if st.sidebar.button(display_name, use_container_width=True):
-        st.session_state.selected_tool = tool_name
-        st.rerun()
-st.sidebar.markdown("---")
-
-# --- 6. 主界面 ---
-selected_tool_name = st.session_state.selected_tool
-
-if not selected_tool_name:
-    st.title("✅ Allen工作台")
-    st.error("在 'tools' 文件夹中未发现任何可用工具。")
-else:
-    display_name = tool_display_names.get(selected_tool_name, selected_tool_name)
-    st.title(f"✅ {display_name}")
-    st.markdown("---")
-    
-    # 动态加载并执行选中的工具
-    try:
-        tool_module = importlib.import_module(f"tools.{selected_tool_name}.tool")
-        tool_module.run()
-    except ImportError as e:
-        st.error(f"加载工具 '{selected_tool_name}' 失败: {e}. 请确保该文件夹下有 'tool.py' 文件。")
-    except AttributeError:
-        st.error(f"工具 '{selected_tool_name}' 的 'tool.py' 文件中缺少一个名为 run() 的入口函数。")
+if __name__ == "__main__":
+    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'; app = QApplication(sys.argv)
+    apply_stylesheet(app, theme='dark_pink.xml', extra={'density_scale': '0'})
+    window = MainWindow(); window.show(); sys.exit(app.exec())

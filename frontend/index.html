@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allen工作台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <style>
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background-color: #e11d48; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200">
+    <div id="app" class="flex h-screen">
+        <nav id="sidebar" class="w-64 bg-slate-800 p-4 flex flex-col flex-shrink-0">
+            <h1 class="text-2xl font-bold text-rose-500 mb-6">Allen工作台</h1>
+            <div id="tool-list" class="flex-grow"></div>
+            <div id="ai-model-selector-container" class="mt-auto"></div>
+        </nav>
+        <main id="main-content" class="flex-1 p-8 overflow-y-auto"></main>
+    </div>
+    <script src="js/main.js"></script>
+</body>
+</html>
