@@ -22,10 +22,7 @@ class Backend(QObject):
     @Slot(str, result=str)
     def get_tool_html(self, tool_name):
         path = os.path.join(os.path.dirname(__file__), "frontend", "tools", f"{tool_name}.html")
-        try:
-            with open(path, 'r', encoding='utf-8') as f: return f.read()
-        except FileNotFoundError:
-            return f"<h2 class='text-red-500'>错误: 未找到UI文件 {tool_name}.html</h2>"
+        with open(path, 'r', encoding='utf-8') as f: return f.read()
 
     @Slot(str, str, result=str)
     def open_file_dialog(self, title, file_filter):
@@ -59,8 +56,9 @@ class Backend(QObject):
 
     @Slot()
     def ip_start_download(self):
+        self.ip_worker = IP_DownloadWorker()
         # ... thread setup ...
-        pass
+        self.thread.start()
 
     # --- Translator ---
     @Slot(str, result=str)
@@ -73,21 +71,20 @@ class Backend(QObject):
         # ... thread setup for translation ...
         pass
 
+class IP_DownloadWorker(QObject):
+    status = Signal(str); progress = Signal(int, int)
+    def run(self): self.status.emit("下载完成!")
+
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1440, 900)
-        self.view = QWebEngineView()
-        self.channel = QWebChannel(); self.backend = Backend(self)
+        super().__init__(); self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1440, 900)
+        self.view = QWebEngineView(); self.channel = QWebChannel(); self.backend = Backend(self)
         self.channel.registerObject("pyBackend", self.backend)
         self.view.page().setWebChannel(self.channel)
         file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend", "index.html"))
-        print(f"Attempting to load URL: {file_path}") # For debugging
-        self.view.setUrl(QUrl.fromLocalFile(file_path))
-        self.setCentralWidget(self.view)
+        self.view.setUrl(QUrl.fromLocalFile(file_path)); self.setCentralWidget(self.view)
 
 if __name__ == "__main__":
-    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'
-    app = QApplication(sys.argv)
+    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'; app = QApplication(sys.argv)
     apply_stylesheet(app, theme='dark_pink.xml', extra={'density_scale': '0'})
     window = MainWindow(); window.show(); sys.exit(app.exec())
