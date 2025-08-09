@@ -3,7 +3,7 @@ import os
 import importlib
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QStackedWidget, QLabel, QListWidgetItem
+    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox
 )
 from PySide6.QtCore import QSize, Qt
 
