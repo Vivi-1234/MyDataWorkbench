@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 
 STYLESHEET = """
 #ToolPanel {
-    background-color: #18181b; color: #d4d4d8; font-family: 'Segoe UI', sans-serif;
+    background-color: #18181b; color: #d4d4d8;
 }
 QMainWindow { background-color: #18181b; }
 QLabel#title { font-size: 18px; font-weight: bold; color: #f43f5e; }
