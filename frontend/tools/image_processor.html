@@ -10,30 +10,30 @@
     </div>
 
     <!-- Step Content -->
-    <div id="ip-step-content" class="bg-gray-800 p-6 rounded-lg shadow-lg">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
         <!-- Step 1: Download -->
         <div id="ip-step-1" class="ip-step-panel space-y-4">
-            <div class="flex items-center space-x-4">
-                <button id="ip-select-qc-btn" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-md">📂 选择 qc.txt</button>
-                <p id="ip-qc-file-label" class="text-gray-400">未选择文件</p>
-            </div>
+            <div class="flex items-center space-x-4"><button id="ip-select-qc-btn" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-md">📂 选择 qc.txt</button><p id="ip-qc-file-label" class="text-gray-400">未选择文件</p></div>
             <button id="ip-start-download-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🚀 开始下载</button>
-            <div class="w-full bg-gray-700 rounded-full h-4">
-                <div id="ip-download-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div>
-            </div>
+            <div class="w-full bg-gray-700 rounded-full h-4"><div id="ip-download-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div></div>
             <div id="ip-download-status" class="text-sm text-gray-400 p-4 bg-gray-900 rounded-md min-h-[100px]">等待操作...</div>
         </div>
-
-        <!-- Step 2: Filter (hidden by default) -->
+        <!-- Step 2: Filter -->
         <div id="ip-step-2" class="ip-step-panel space-y-4 hidden">
-            <p>此步骤将使用颜色识别算法，将明显没有logo的图片移动到“processed”文件夹。</p>
             <button id="ip-start-filter-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🤖 开始自动筛选</button>
-            <div class="w-full bg-gray-700 rounded-full h-4">
-                <div id="ip-filter-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div>
-            </div>
+            <div class="w-full bg-gray-700 rounded-full h-4"><div id="ip-filter-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div></div>
             <div id="ip-filter-status" class="text-sm text-gray-400 p-4 bg-gray-900 rounded-md min-h-[100px]">等待操作...</div>
         </div>
-
-        <!-- Step 3 & 4 will be similar -->
+        <!-- Step 3: Template -->
+        <div id="ip-step-3" class="ip-step-panel space-y-4 hidden">
+            <button id="ip-start-template-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🔥 使用模板处理</button>
+            <div class="w-full bg-gray-700 rounded-full h-4"><div id="ip-template-progress" class="bg-pink-500 h-4 rounded-full" style="width: 0%"></div></div>
+            <div id="ip-template-status" class="text-sm text-gray-400 p-4 bg-gray-900 rounded-md min-h-[100px]">等待操作...</div>
+        </div>
+        <!-- Step 4: Validate -->
+        <div id="ip-step-4" class="ip-step-panel space-y-4 hidden">
+            <button id="ip-start-validate-btn" class="w-full bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 rounded-md">🔍 开始最终校验</button>
+            <div id="ip-validate-status" class="text-sm text-gray-400 p-4 bg-gray-900 rounded-md min-h-[100px]">等待操作...</div>
+        </div>
     </div>
 </div>

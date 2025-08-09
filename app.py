@@ -1,5 +1,7 @@
 import sys
 import os
+# Add project root to path to ensure modules are found
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import json
 import pandas as pd
 import shutil
@@ -20,6 +22,8 @@ class Backend(QObject):
         # Create instances of modular backends
         self.image_processor = ImageProcessorBackend(main_window)
         self.translator = TranslatorBackend(main_window)
+        # Affiliate dataframes
+        self.df_users_full, self.df_orders_full, self.df_packages_full = None, None, None
 
     @Slot(str, result=str)
     def get_tool_html(self, tool_name):
@@ -32,10 +36,6 @@ class Backend(QObject):
         return f"<h2 class='text-red-500'>错误: 未找到工具界面文件 {tool_name}.html</h2>"
 
     # --- Affiliate Data Tool Methods ---
-    def __init__(self):
-        super().__init__()
-        self.df_users_full, self.df_orders_full, self.df_packages_full = None, None, None
-
     def _load_affiliate_data(self):
         if self.df_users_full is not None: return True
         try:
