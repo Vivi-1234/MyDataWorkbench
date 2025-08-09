@@ -1,10 +1,12 @@
 import sys, os, importlib
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox, QPushButton
+    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox, QPushButton, QLineEdit
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIntValidator
 
+# --- Hardcoded QSS for stability and theme ---
 STYLESHEET = """
 QWidget {
     background-color: #18181b; color: #d4d4d8; font-family: 'Segoe UI', sans-serif;
@@ -15,6 +17,7 @@ QListWidget { background-color: #27272a; border: none; font-size: 14px; padding:
 QListWidget::item { padding: 12px 18px; border-radius: 5px; margin: 2px 5px; }
 QListWidget::item:hover { background-color: #3f3f46; }
 QListWidget::item:selected { background-color: #f43f5e; color: #ffffff; }
+QListWidget::item:focus { outline: none; border: 1px solid #f43f5e; }
 QPushButton {
     background-color: #be185d; color: #ffffff; border: none;
     padding: 8px 16px; font-size: 13px; border-radius: 5px;
@@ -25,9 +28,7 @@ QComboBox { background-color: #3f3f46; border-radius: 3px; padding: 5px; border:
 QLineEdit, QTextEdit, QSpinBox, QDateEdit {
     background-color: #3f3f46; border: 1px solid #52525b; padding: 5px; border-radius: 3px;
 }
-QProgressBar { border: 1px solid #52525b; border-radius: 5px; text-align: center; color: #d4d4d8; }
-QProgressBar::chunk { background-color: #be185d; }
-QGroupBox { font-weight: bold; }
+/* ... other styles ... */
 """
 
 class MainWindow(QMainWindow):
@@ -48,7 +49,7 @@ class MainWindow(QMainWindow):
 
         sidebar_layout.addWidget(QLabel("🧠 AI模型选择:"))
         self.model_selector = QComboBox()
-        self.model_selector.addItems(["mulebuy-optimizer", "llama3.1:latest", "qwen3:8b"])
+        self.model_selector.addItems(["mulebuy-optimizer", "llama3.1:latest", "qwen3:8b", "gemma3:4b", "gpt-oss:20b"])
         sidebar_layout.addWidget(self.model_selector)
         sidebar_layout.addSpacing(10)
 
@@ -64,10 +65,13 @@ class MainWindow(QMainWindow):
     def load_tools(self):
         tools_dir = "tools"
         tool_map = {
-            "Affiliate_data": "联盟数据", "MulebuyPics": "Mulebuy图片",
-            "image_processor": "图片批量处理器", "Translator": "文案优化"
+            "Affiliate_data": "联盟数据",
+            "image_processor": "图片批量处理器",
+            "Translator": "文案优化",
+            "AI_Chat": "AI聊天" # New tool
         }
-        available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and os.path.isdir(os.path.join(tools_dir, d))])
+        # Explicitly exclude MulebuyPics
+        available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and d != "MulebuyPics" and os.path.isdir(os.path.join(tools_dir, d))])
 
         for tool_name in available_tools:
             display_name = tool_map.get(tool_name)
@@ -79,24 +83,17 @@ class MainWindow(QMainWindow):
                 widget_class = next(getattr(module, name) for name in dir(module) if isinstance(getattr(module, name), type) and issubclass(getattr(module, name), QWidget) and getattr(module, name) is not QWidget)
                 widget = widget_class(self)
             except Exception as e:
-                print(f"Error loading {tool_name}: {e}")
-                widget = QLabel(f"加载工具 {tool_name} 失败:\n{e}")
-                widget.setAlignment(Qt.AlignCenter)
+                widget = QLabel(f"加载工具 {tool_name} 失败:\n{e}"); widget.setAlignment(Qt.AlignCenter)
 
             self.stack.addWidget(widget)
 
         if self.tool_list.count() > 0: self.tool_list.setCurrentRow(0)
 
-    def switch_tool(self, item):
-        self.stack.setCurrentIndex(self.tool_list.row(item))
-
-    def get_selected_model(self):
-        return self.model_selector.currentText()
+    def switch_tool(self, item): self.stack.setCurrentIndex(self.tool_list.row(item))
+    def get_selected_model(self): return self.model_selector.currentText()
 
 if __name__ == "__main__":
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    window = MainWindow(); window.show(); sys.exit(app.exec())

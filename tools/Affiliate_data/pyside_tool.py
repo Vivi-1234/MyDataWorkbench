@@ -1,18 +1,16 @@
 import os, pandas as pd
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel,
-    QDateEdit, QGridLayout, QSpinBox, QMessageBox
+    QDateEdit, QGridLayout, QLineEdit, QMessageBox
 )
 from PySide6.QtCore import QDate, QObject, QThread, Signal, Qt
+from PySide6.QtGui import QIntValidator
 
 class Worker(QObject):
-    finished = Signal(object)
-    error = Signal(str)
+    finished = Signal(object); error = Signal(str)
     def __init__(self, affiliate_id, start_date, end_date):
-        super().__init__()
-        self.affiliate_id = affiliate_id; self.start_date = start_date; self.end_date = end_date
+        super().__init__(); self.affiliate_id = affiliate_id; self.start_date = start_date; self.end_date = end_date
         self.DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-
     def run(self):
         try:
             users_df = pd.read_csv(os.path.join(self.DATA_PATH, 'wp_users_affilate_tmp.csv'), encoding='gb18030')
@@ -21,14 +19,11 @@ class Worker(QObject):
             for df in [users_df, orders_df, packages_df]:
                 for col in df.columns:
                     if 'time' in col: df[col] = pd.to_datetime(df[col], errors='coerce')
-
             df_users = users_df[users_df['affilate'] == self.affiliate_id]
             df_orders = orders_df[orders_df['affilate'] == self.affiliate_id]
             df_packages = packages_df[packages_df['affilate'] == self.affiliate_id]
-
             if df_users.empty and df_orders.empty and df_packages.empty:
                 self.error.emit(f"找不到网红ID {self.affiliate_id} 的任何记录。"); return
-
             metrics = {
                 "注册用户数": len(df_users[(df_users['reg_time'] >= self.start_date) & (df_users['reg_time'] <= self.end_date)]),
                 "激活用户数": len(df_users[(df_users['verified_time'] >= self.start_date) & (df_users['verified_time'] <= self.end_date)]),
@@ -47,7 +42,7 @@ class AffiliateDataWidget(QWidget):
         layout = QVBoxLayout(self); layout.setContentsMargins(20,20,20,20)
 
         input_widget = QWidget(); input_layout = QHBoxLayout(input_widget)
-        self.id_input = QSpinBox(); self.id_input.setRange(1, 999999999)
+        self.id_input = QLineEdit(); self.id_input.setValidator(QIntValidator(1, 999999999))
         self.start_date_input = QDateEdit(QDate.currentDate()); self.start_date_input.setCalendarPopup(True)
         self.end_date_input = QDateEdit(QDate.currentDate()); self.end_date_input.setCalendarPopup(True)
         self.generate_button = QPushButton("🚀 生成分析报告")
@@ -59,17 +54,17 @@ class AffiliateDataWidget(QWidget):
 
         self.report_container = QWidget()
         self.report_layout = QVBoxLayout(self.report_container)
-        self.report_layout.addWidget(QLabel("请设置参数后点击按钮生成报告。"))
+        self.report_layout.addWidget(QLabel("请填写网红ID和日期，然后点击生成报告。"))
 
         layout.addWidget(input_widget); layout.addWidget(self.report_container, 1)
 
     def run_report_generation(self):
+        if not self.id_input.text(): QMessageBox.warning(self, "提示", "请输入网红ID。"); return
         self.generate_button.setDisabled(True); self.generate_button.setText("正在生成...")
-        self.clear_layout(self.report_layout)
-        self.report_layout.addWidget(QLabel("正在计算..."))
+        self.clear_layout(self.report_layout); self.report_layout.addWidget(QLabel("正在计算..."))
 
         self.thread = QThread()
-        self.worker = Worker(self.id_input.value(), self.start_date_input.dateTime().toPython(), self.end_date_input.dateTime().toPython().replace(hour=23, minute=59, second=59))
+        self.worker = Worker(int(self.id_input.text()), self.start_date_input.dateTime().toPython(), self.end_date_input.dateTime().toPython().replace(hour=23, minute=59, second=59))
         self.worker.moveToThread(self.thread)
         self.worker.finished.connect(self.on_report_finished); self.worker.error.connect(self.on_report_error)
         self.worker.finished.connect(self.thread.quit); self.worker.finished.connect(self.worker.deleteLater)
@@ -82,14 +77,16 @@ class AffiliateDataWidget(QWidget):
         row, col = 0, 0
         for key in display_order:
             val = metrics.get(key, 0); formatted_val = f"{val:,.2f}" if isinstance(val, float) else f"{val:,}"
-            grid.addWidget(QLabel(f"<b>{key}:</b>"), row, col*2); grid.addWidget(QLabel(formatted_val), row, col*2+1)
+            key_label = QLabel(f"<b>{key}:</b>"); val_label = QLabel(formatted_val)
+            key_label.setAlignment(Qt.AlignRight); val_label.setAlignment(Qt.AlignLeft)
+            grid.addWidget(key_label, row, col*2); grid.addWidget(val_label, row, col*2+1)
             col +=1
             if col > 1: col=0; row+=1
         self.report_layout.addLayout(grid); self.report_layout.addStretch()
         self.generate_button.setDisabled(False); self.generate_button.setText("🚀 生成分析报告")
 
     def on_report_error(self, msg):
-        self.clear_layout(self.report_layout)
+        self.clear_layout(self.report_layout); self.report_layout.addWidget(QLabel(msg))
         QMessageBox.critical(self, "错误", msg)
         self.generate_button.setDisabled(False); self.generate_button.setText("🚀 生成分析报告")
 
