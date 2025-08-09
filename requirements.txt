@@ -1,5 +1,5 @@
-google-cloud-firestore
-firebase-admin
+PySide6
 opencv-python
 numpy
-tqdm
+pandas
+requests

@@ -1,103 +1,132 @@
-# 文件路径: MyDataWorkbench/app.py
-
-import streamlit as st
+import sys
 import os
 import importlib
-
-# --- 1. 页面基础配置 ---
-st.set_page_config(
-    layout="wide", 
-    page_title="Allen工作台",
-    page_icon="✅"
+from PySide6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QListWidget, QStackedWidget, QLabel, QListWidgetItem
 )
+from PySide6.QtCore import QSize, Qt
 
-# --- 2. 注入CSS ---
-# ... (这部分代码保持不变) ...
-st.markdown("""
-<style>
-    div[data-testid="stNumberInput"] button {
-        display: none;
-    }
-    [data-testid="stSidebar"] .stButton button {
-        text-align: left;
-        padding-left: 20px;
-    }
-</style>
-""", unsafe_allow_html=True)
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Allen工作台")
+        self.setGeometry(100, 100, 1200, 800)
+
+        # --- Main Layout ---
+        main_widget = QWidget()
+        main_layout = QHBoxLayout(main_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # --- Sidebar ---
+        self.sidebar = QListWidget()
+        self.sidebar.setFixedWidth(200)
+        self.sidebar.itemClicked.connect(self.switch_tool)
+
+        # --- Central Widget Area ---
+        self.stacked_widget = QStackedWidget()
+
+        main_layout.addWidget(self.sidebar)
+        main_layout.addWidget(self.stacked_widget)
+
+        self.setCentralWidget(main_widget)
+
+        self.tool_widgets = {}
+        self.load_tools()
+
+    def load_tools(self):
+        """Scans 'tools', finds pyside_tool.py, and loads the widget."""
+        tools_dir = "tools"
+        tool_display_names = {
+            "image_processor": "图片批量处理器",
+            "MulebuyPics": "Mulebuy图片",
+            "Affiliate_data": "联盟数据",
+            "Translator": "文案优化"
+        }
+
+        welcome_widget = QLabel("欢迎使用 Allen 工作台\n\n请从左侧选择一个工具")
+        welcome_widget.setAlignment(Qt.AlignCenter)
+        self.stacked_widget.addWidget(welcome_widget)
+
+        available_tools = [d for d in os.listdir(tools_dir) if os.path.isdir(os.path.join(tools_dir, d)) and not d.startswith('__')]
+
+        for tool_name in available_tools:
+            display_name = tool_display_names.get(tool_name, tool_name)
+            item = QListWidgetItem(display_name)
+            item.setData(Qt.UserRole, tool_name)
+            self.sidebar.addItem(item)
+
+            tool_widget = self.load_tool_widget(tool_name, display_name)
+            self.stacked_widget.addWidget(tool_widget)
+            self.tool_widgets[tool_name] = tool_widget
+
+        if self.sidebar.count() > 0:
+            self.sidebar.setCurrentRow(0)
+            self.switch_tool(self.sidebar.item(0))
+
+    def load_tool_widget(self, tool_name, display_name):
+        """Dynamically loads a widget from a tool's pyside_tool.py file."""
+        try:
+            module_path = f"tools.{tool_name}.pyside_tool"
+            tool_module = importlib.import_module(module_path)
+
+            # Find the QWidget class in the module
+            for attribute_name in dir(tool_module):
+                attribute = getattr(tool_module, attribute_name)
+                if isinstance(attribute, type) and issubclass(attribute, QWidget) and attribute is not QWidget:
+                    print(f"Found widget {attribute_name} in {tool_name}")
+                    return attribute() # Instantiate the widget
+
+            # Fallback if no specific widget is found
+            return self.create_placeholder_widget(f"{display_name}\n\n在pyside_tool.py中未找到QWidget。")
+
+        except ImportError as e:
+            print(f"Could not import {module_path}: {e}")
+            return self.create_placeholder_widget(f"无法加载工具: {display_name}\n\n请确保 'pyside_tool.py' 文件存在。")
+        except Exception as e:
+            print(f"Error loading widget for {tool_name}: {e}")
+            return self.create_placeholder_widget(f"加载 {display_name} 时出错。")
+
+    def create_placeholder_widget(self, text):
+        """Creates a standard placeholder widget."""
+        widget = QLabel(text)
+        widget.setAlignment(Qt.AlignCenter)
+        widget.setWordWrap(True)
+        return widget
+
+    def switch_tool(self, item):
+        """Switches the view in the QStackedWidget to the selected tool."""
+        tool_name = item.data(Qt.UserRole)
+
+        # This logic will be expanded later to load the actual tool widget
+        if tool_name in self.tool_widgets:
+            widget_to_display = self.tool_widgets[tool_name]
+            self.stacked_widget.setCurrentWidget(widget_to_display)
+        else:
+            # This case handles the welcome screen or any item without a tool_name
+            self.stacked_widget.setCurrentIndex(0)
 
 
-# --- 3. 动态工具发现与加载 ---
-def get_tools():
-    """扫描 'tools' 文件夹，找到所有可用的工具。"""
-    tools_dir = "tools"
-    if not os.path.exists(tools_dir):
-        return []
-    return [d for d in os.listdir(tools_dir) if os.path.isdir(os.path.join(tools_dir, d)) and os.path.exists(os.path.join(tools_dir, d, '__init__.py'))]
+def load_stylesheet():
+    """Loads an external QSS stylesheet."""
+    style_file = "styles.qss"
+    if os.path.exists(style_file):
+        with open(style_file, "r") as f:
+            return f.read()
+    else:
+        print(f"Warning: Stylesheet '{style_file}' not found.")
+        return ""
 
-# --- 4. 使用 Session State 管理状态 ---
-available_tools = get_tools()
-
-if 'selected_tool' not in st.session_state:
-    st.session_state.selected_tool = available_tools[0] if available_tools else None
-
-# ★★★★★ 新增：在这里定义您留下的模型列表 ★★★★★
-available_models = [
-    "mulebuy-optimizer",
-    "llama3.1:latest",  # 默认主力模型
-    "qwen3:8b",
-    "gemma3:4b",
-    "gpt-oss:20b"
-]
-
-if 'selected_model' not in st.session_state:
-    st.session_state.selected_model = available_models[0] # 默认选择第一个
-
-# --- 5. 侧边栏导航 ---
-st.sidebar.title("工具箱")
-
-# ★★★★★ 新增：在这里添加模型选择的下拉菜单 ★★★★★
-st.session_state.selected_model = st.sidebar.selectbox(
-    "🧠 请选择要调用的AI模型:",
-    options=available_models,
-    index=available_models.index(st.session_state.selected_model), # 保持上次的选择
-    help="您的选择会立即生效，并应用于所有AI工具。"
-)
-st.sidebar.info(f"当前激活: **{st.session_state.selected_model}**")
-st.sidebar.markdown("---")
-
-
-# 定义工具的显示名称映射
-tool_display_names = {
-    "image_processor": "图片批量处理器",
-    "MulebuyPics": "Mulebuy图片",
-    "Affiliate_data": "联盟数据",
-    "Translator": "文案优化"
-}
-
-for tool_name in available_tools:
-    # 获取显示名称，如果找不到映射，则使用原始文件夹名
-    display_name = tool_display_names.get(tool_name, tool_name)
-    if st.sidebar.button(display_name, use_container_width=True):
-        st.session_state.selected_tool = tool_name
-        st.rerun()
-st.sidebar.markdown("---")
-
-# --- 6. 主界面 ---
-selected_tool_name = st.session_state.selected_tool
-
-if not selected_tool_name:
-    st.title("✅ Allen工作台")
-    st.error("在 'tools' 文件夹中未发现任何可用工具。")
-else:
-    display_name = tool_display_names.get(selected_tool_name, selected_tool_name)
-    st.title(f"✅ {display_name}")
-    st.markdown("---")
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
     
-    # 动态加载并执行选中的工具
-    try:
-        tool_module = importlib.import_module(f"tools.{selected_tool_name}.tool")
-        tool_module.run()
-    except ImportError as e:
-        st.error(f"加载工具 '{selected_tool_name}' 失败: {e}. 请确保该文件夹下有 'tool.py' 文件。")
-    except AttributeError:
-        st.error(f"工具 '{selected_tool_name}' 的 'tool.py' 文件中缺少一个名为 run() 的入口函数。")
+    # Apply the stylesheet
+    stylesheet = load_stylesheet()
+    if stylesheet:
+        app.setStyleSheet(stylesheet)
+
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
