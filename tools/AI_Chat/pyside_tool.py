@@ -39,9 +39,10 @@ class AIChatWidget(QWidget):
         self.messages = []
 
         # --- UI Setup ---
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout()
 
-        title = QLabel("🤖 AI 聊天"); title.setObjectName("title")
+        title = QLabel("🤖 AI 聊天")
+        title.setObjectName("title")
         layout.addWidget(title)
 
         self.chat_history = QTextEdit()
@@ -57,6 +58,7 @@ class AIChatWidget(QWidget):
         input_layout.addWidget(self.user_input)
         input_layout.addWidget(self.send_button)
         layout.addLayout(input_layout)
+        self.setLayout(layout)
 
         # --- Connections ---
         self.send_button.clicked.connect(self.send_message)

@@ -41,25 +41,45 @@ class Worker(QObject):
 
 class AffiliateDataWidget(QWidget):
     def __init__(self, main_window=None):
-        super().__init__(); self.main_window = main_window
-        layout = QVBoxLayout(self); layout.setContentsMargins(20,20,20,20); layout.setSpacing(15)
+        super().__init__()
+        self.main_window = main_window
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
 
-        input_widget = QWidget(); input_layout = QHBoxLayout(input_widget); input_layout.setSpacing(10)
-        self.id_input = QLineEdit(); self.id_input.setValidator(QIntValidator(1, 999999999)); self.id_input.setPlaceholderText("输入网红ID")
-        self.start_date_input = QDateEdit(QDate.currentDate()); self.start_date_input.setCalendarPopup(True)
-        self.end_date_input = QDateEdit(QDate.currentDate()); self.end_date_input.setCalendarPopup(True)
+        input_widget = QWidget()
+        input_layout = QHBoxLayout(input_widget)
+        input_layout.setSpacing(10)
+
+        self.id_input = QLineEdit()
+        self.id_input.setValidator(QIntValidator(1, 999999999))
+        self.id_input.setPlaceholderText("输入网红ID")
+
+        self.start_date_input = QDateEdit(QDate.currentDate())
+        self.start_date_input.setCalendarPopup(True)
+
+        self.end_date_input = QDateEdit(QDate.currentDate())
+        self.end_date_input.setCalendarPopup(True)
+
         self.generate_button = QPushButton("🚀 生成分析报告")
         self.generate_button.clicked.connect(self.run_report_generation)
-        input_layout.addWidget(QLabel("网红ID:")); input_layout.addWidget(self.id_input)
-        input_layout.addWidget(QLabel("开始日期:")); input_layout.addWidget(self.start_date_input)
-        input_layout.addWidget(QLabel("结束日期:")); input_layout.addWidget(self.end_date_input)
-        input_layout.addStretch(); input_layout.addWidget(self.generate_button)
+
+        input_layout.addWidget(QLabel("网红ID:"))
+        input_layout.addWidget(self.id_input)
+        input_layout.addWidget(QLabel("开始日期:"))
+        input_layout.addWidget(self.start_date_input)
+        input_layout.addWidget(QLabel("结束日期:"))
+        input_layout.addWidget(self.end_date_input)
+        input_layout.addStretch()
+        input_layout.addWidget(self.generate_button)
 
         self.report_container = QWidget()
         self.report_layout = QVBoxLayout(self.report_container)
         self.report_layout.addWidget(QLabel("请填写网红ID和日期，然后点击生成报告。"))
 
-        layout.addWidget(input_widget); layout.addWidget(self.report_container, 1)
+        layout.addWidget(input_widget)
+        layout.addWidget(self.report_container, 1)
+        self.setLayout(layout)
 
     def run_report_generation(self):
         if not self.id_input.text(): QMessageBox.warning(self, "提示", "请输入网红ID。"); return

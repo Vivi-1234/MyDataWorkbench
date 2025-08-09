@@ -66,11 +66,12 @@ class TranslatorWidget(QWidget):
         self.ai_results = {}
 
         # --- Base UI ---
-        main_layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout()
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(10)
 
-        title = QLabel("文案优化工具"); title.setObjectName("title")
+        title = QLabel("文案优化工具")
+        title.setObjectName("title")
         main_layout.addWidget(title)
         main_layout.addWidget(QLabel("本工具以本地EN文件夹为基准，利用AI优化和修正您上传的目标语言文件夹中的文案。"))
 
@@ -119,6 +120,8 @@ class TranslatorWidget(QWidget):
         self.save_button.setEnabled(False)
         main_layout.addWidget(self.results_tabs, 1) # Give it stretch factor
         main_layout.addWidget(self.save_button)
+
+        self.setLayout(main_layout)
 
     def _load_base_files(self):
         try:
