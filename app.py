@@ -6,10 +6,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 STYLESHEET = """
-QWidget {
+#ToolPanel {
     background-color: #18181b; color: #d4d4d8; font-family: 'Segoe UI', sans-serif;
 }
-QMainWindow { background-color: #09090b; }
+QMainWindow { background-color: #18181b; }
 QLabel#title { font-size: 18px; font-weight: bold; color: #f43f5e; }
 QListWidget { background-color: #27272a; border: none; }
 QListWidget::item { padding: 12px 18px; border-radius: 5px; margin: 2px 5px; }
@@ -67,8 +67,7 @@ class MainWindow(QMainWindow):
         tools_dir = "tools"
         tool_map = {
             "Affiliate_data": "联盟数据", "image_processor": "图片批量处理器",
-            "Translator": "文案优化", "AI_Chat": "AI聊天",
-            "Test_Tool": "调试工具"
+            "Translator": "文案优化", "AI_Chat": "AI聊天"
         }
         available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and os.path.isdir(os.path.join(tools_dir, d))])
 
@@ -84,6 +83,7 @@ class MainWindow(QMainWindow):
                 module = importlib.import_module(module_path)
                 widget_class = next(c for c in vars(module).values() if isinstance(c, type) and issubclass(c, QWidget) and c is not QWidget)
                 widget = widget_class(self)
+                widget.setObjectName("ToolPanel")
             except Exception as e:
                 widget = QLabel(f"加载工具 {tool_name} 失败:\n{e}"); widget.setAlignment(Qt.AlignCenter)
 
