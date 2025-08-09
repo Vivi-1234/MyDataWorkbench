@@ -1,7 +1,7 @@
 import sys, os, importlib
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox
+    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox, QDockWidget
 )
 from PySide6.QtCore import Qt
 
@@ -35,17 +35,21 @@ QGroupBox { font-weight: bold; }
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Allen工作台"); self.setGeometry(100, 100, 1366, 768)
+        self.setWindowTitle("Allen工作台")
+        self.setGeometry(100, 100, 1366, 768)
+        self.setDockOptions(QMainWindow.AnimatedDocks)
 
-        main_widget = QWidget()
-        main_layout = QHBoxLayout(main_widget)
-        main_layout.setContentsMargins(0,0,0,0); main_layout.setSpacing(0)
+        # --- Sidebar as a QDockWidget ---
+        sidebar_dock = QDockWidget("工具箱", self)
+        sidebar_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 
-        sidebar_widget = QWidget(); sidebar_widget.setFixedWidth(240)
-        sidebar_layout = QVBoxLayout(sidebar_widget)
-        sidebar_layout.setContentsMargins(10,10,10,10); sidebar_layout.setSpacing(10)
+        sidebar_contents = QWidget()
+        sidebar_layout = QVBoxLayout(sidebar_contents)
+        sidebar_layout.setContentsMargins(10,10,10,10)
+        sidebar_layout.setSpacing(10)
 
-        title_label = QLabel("Allen工作台"); title_label.setObjectName("title")
+        title_label = QLabel("Allen工作台")
+        title_label.setObjectName("title")
         sidebar_layout.addWidget(title_label)
 
         sidebar_layout.addWidget(QLabel("🧠 AI模型选择:"))
@@ -54,12 +58,16 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.model_selector)
         sidebar_layout.addSpacing(10)
 
-        self.tool_list = QListWidget(); self.tool_list.itemClicked.connect(self.switch_tool)
+        self.tool_list = QListWidget()
+        self.tool_list.itemClicked.connect(self.switch_tool)
         sidebar_layout.addWidget(self.tool_list)
 
+        sidebar_dock.setWidget(sidebar_contents)
+        self.addDockWidget(Qt.LeftDockWidgetArea, sidebar_dock)
+
+        # --- QStackedWidget as Central Widget ---
         self.stack = QStackedWidget()
-        main_layout.addWidget(sidebar_widget); main_layout.addWidget(self.stack)
-        self.setCentralWidget(main_widget)
+        self.setCentralWidget(self.stack)
 
         self.load_tools()
 
