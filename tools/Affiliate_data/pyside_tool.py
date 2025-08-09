@@ -19,11 +19,14 @@ class Worker(QObject):
             for df in [users_df, orders_df, packages_df]:
                 for col in df.columns:
                     if 'time' in col: df[col] = pd.to_datetime(df[col], errors='coerce')
+
             df_users = users_df[users_df['affilate'] == self.affiliate_id]
             df_orders = orders_df[orders_df['affilate'] == self.affiliate_id]
             df_packages = packages_df[packages_df['affilate'] == self.affiliate_id]
+
             if df_users.empty and df_orders.empty and df_packages.empty:
                 self.error.emit(f"找不到网红ID {self.affiliate_id} 的任何记录。"); return
+
             metrics = {
                 "注册用户数": len(df_users[(df_users['reg_time'] >= self.start_date) & (df_users['reg_time'] <= self.end_date)]),
                 "激活用户数": len(df_users[(df_users['verified_time'] >= self.start_date) & (df_users['verified_time'] <= self.end_date)]),
@@ -33,16 +36,16 @@ class Worker(QObject):
             }
             metrics["收单总金额"] = metrics["下单总金额"] + metrics["提包总金额"]
             self.finished.emit(metrics)
-        except FileNotFoundError: self.error.emit("错误：找不到数据文件。")
+        except FileNotFoundError: self.error.emit("错误：一个或多个数据文件不存在。")
         except Exception as e: self.error.emit(f"处理数据时出错: {e}")
 
 class AffiliateDataWidget(QWidget):
     def __init__(self, main_window=None):
         super().__init__(); self.main_window = main_window
-        layout = QVBoxLayout(self); layout.setContentsMargins(20,20,20,20)
+        layout = QVBoxLayout(self); layout.setContentsMargins(20,20,20,20); layout.setSpacing(15)
 
-        input_widget = QWidget(); input_layout = QHBoxLayout(input_widget)
-        self.id_input = QLineEdit(); self.id_input.setValidator(QIntValidator(1, 999999999))
+        input_widget = QWidget(); input_layout = QHBoxLayout(input_widget); input_layout.setSpacing(10)
+        self.id_input = QLineEdit(); self.id_input.setValidator(QIntValidator(1, 999999999)); self.id_input.setPlaceholderText("输入网红ID")
         self.start_date_input = QDateEdit(QDate.currentDate()); self.start_date_input.setCalendarPopup(True)
         self.end_date_input = QDateEdit(QDate.currentDate()); self.end_date_input.setCalendarPopup(True)
         self.generate_button = QPushButton("🚀 生成分析报告")
@@ -72,13 +75,12 @@ class AffiliateDataWidget(QWidget):
 
     def on_report_finished(self, metrics):
         self.clear_layout(self.report_layout)
-        grid = QGridLayout()
+        grid = QGridLayout(); grid.setSpacing(15)
         display_order = ['注册用户数', '激活用户数', '活跃人数', '下单人数', '下单数量', '下单总金额', '提包人数', '提包数量', '提包总金额', '收单总金额']
         row, col = 0, 0
         for key in display_order:
             val = metrics.get(key, 0); formatted_val = f"{val:,.2f}" if isinstance(val, float) else f"{val:,}"
-            key_label = QLabel(f"<b>{key}:</b>"); val_label = QLabel(formatted_val)
-            key_label.setAlignment(Qt.AlignRight); val_label.setAlignment(Qt.AlignLeft)
+            key_label = QLabel(f"<b>{key}:</b>"); val_label = QLabel(formatted_val); val_label.setStyleSheet("font-size: 16px; color: #f43f5e;")
             grid.addWidget(key_label, row, col*2); grid.addWidget(val_label, row, col*2+1)
             col +=1
             if col > 1: col=0; row+=1

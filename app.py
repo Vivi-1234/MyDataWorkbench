@@ -1,19 +1,17 @@
 import sys, os, importlib
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox, QPushButton, QLineEdit
+    QListWidget, QStackedWidget, QLabel, QListWidgetItem, QComboBox
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIntValidator
 
-# --- Hardcoded QSS for stability and theme ---
 STYLESHEET = """
 QWidget {
     background-color: #18181b; color: #d4d4d8; font-family: 'Segoe UI', sans-serif;
 }
 QMainWindow { background-color: #09090b; }
 QLabel#title { font-size: 18px; font-weight: bold; color: #f43f5e; }
-QListWidget { background-color: #27272a; border: none; font-size: 14px; padding: 5px; }
+QListWidget { background-color: #27272a; border: none; }
 QListWidget::item { padding: 12px 18px; border-radius: 5px; margin: 2px 5px; }
 QListWidget::item:hover { background-color: #3f3f46; }
 QListWidget::item:selected { background-color: #f43f5e; color: #ffffff; }
@@ -25,10 +23,13 @@ QPushButton {
 QPushButton:hover { background-color: #9d174d; }
 QPushButton:disabled { background-color: #52525b; color: #a1a1aa; }
 QComboBox { background-color: #3f3f46; border-radius: 3px; padding: 5px; border: 1px solid #52525b; }
-QLineEdit, QTextEdit, QSpinBox, QDateEdit {
+QLineEdit, QTextEdit, QDateEdit {
     background-color: #3f3f46; border: 1px solid #52525b; padding: 5px; border-radius: 3px;
 }
-/* ... other styles ... */
+QTextEdit { color: #d4d4d8; }
+QProgressBar { border: 1px solid #52525b; border-radius: 5px; text-align: center; color: #d4d4d8; }
+QProgressBar::chunk { background-color: #be185d; }
+QGroupBox { font-weight: bold; }
 """
 
 class MainWindow(QMainWindow):
@@ -65,13 +66,10 @@ class MainWindow(QMainWindow):
     def load_tools(self):
         tools_dir = "tools"
         tool_map = {
-            "Affiliate_data": "联盟数据",
-            "image_processor": "图片批量处理器",
-            "Translator": "文案优化",
-            "AI_Chat": "AI聊天" # New tool
+            "Affiliate_data": "联盟数据", "image_processor": "图片批量处理器",
+            "Translator": "文案优化", "AI_Chat": "AI聊天"
         }
-        # Explicitly exclude MulebuyPics
-        available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and d != "MulebuyPics" and os.path.isdir(os.path.join(tools_dir, d))])
+        available_tools = sorted([d for d in os.listdir(tools_dir) if d in tool_map and os.path.isdir(os.path.join(tools_dir, d))])
 
         for tool_name in available_tools:
             display_name = tool_map.get(tool_name)
@@ -79,8 +77,11 @@ class MainWindow(QMainWindow):
             self.tool_list.addItem(item)
 
             try:
-                module = importlib.import_module(f"tools.{tool_name}.pyside_tool")
-                widget_class = next(getattr(module, name) for name in dir(module) if isinstance(getattr(module, name), type) and issubclass(getattr(module, name), QWidget) and getattr(module, name) is not QWidget)
+                module_path = f"tools.{tool_name}.pyside_tool"
+                if not os.path.exists(module_path.replace('.', '/') + '.py'):
+                    raise FileNotFoundError(f"{module_path}.py not found")
+                module = importlib.import_module(module_path)
+                widget_class = next(c for c in vars(module).values() if isinstance(c, type) and issubclass(c, QWidget) and c is not QWidget)
                 widget = widget_class(self)
             except Exception as e:
                 widget = QLabel(f"加载工具 {tool_name} 失败:\n{e}"); widget.setAlignment(Qt.AlignCenter)
@@ -93,6 +94,7 @@ class MainWindow(QMainWindow):
     def get_selected_model(self): return self.model_selector.currentText()
 
 if __name__ == "__main__":
+    if sys.platform == 'win32': os.environ['QT_FONT_DPI'] = '96'
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLESHEET)

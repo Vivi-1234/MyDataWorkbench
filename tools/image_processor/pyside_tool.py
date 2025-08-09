@@ -1,6 +1,6 @@
-import os, shutil, time, requests, cv2, numpy as np, json
-from urllib.parse import urlparse
+import os, shutil, json, requests, cv2, numpy as np
 from collections import Counter
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QProgressBar,
